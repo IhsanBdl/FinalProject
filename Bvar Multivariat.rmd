@@ -1,0 +1,454 @@
+---
+title: "Model_Bvar"
+author: "Maulana Ihsan Athallah"
+date: "2025-09-27"
+output: word_document
+---
+
+# **BISMILLAH FINAL PROJECT**
+### **Step 3 : PEMODELAN TIPE 1**
+
+
+### 1. Panggil Library yang akan digunakan
+```{r}
+# === Paket Dasar ===
+library(tidyverse)       # gabungan dplyr, ggplot2, readr, tidyr
+library(data.table)      # manipulasi data cepat (opsional)
+library(scales)          # format angka dan sumbu
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+# === Visualisasi ===
+library(ggplot2)
+library(ggthemes)
+library(viridis)
+
+# === Standarisasi & Machine Learning ===
+library(caret)           # preprocessing (scale, center), evaluasi model
+library(recipes)         # pipeline preprocessing alternatif
+library(tseries)
+library(MASS)
+library(bestNormalize)
+
+# === Deep Learning ===
+library(keras)           # untuk LSTM, optimizer (Adam, Nadam, RMSprop)
+library(tensorflow)      # backend keras
+
+# === Evaluasi ===
+library(Metrics)         # MAE, RMSE, MSE
+
+# === Utilitas ===
+library(glue)            # string interpolation seperti f-string Python
+library(reticulate)      # kalau mau jalankan Python langsung
+library(microbenchmark)  # alternatif timeit
+```
+
+
+### Data Energi Sektor Industri
+
+```{r}
+industri <- read_csv2("industri.csv")
+industri
+```
+
+```{r}
+str(industri)
+```
+
+
+### Data Energi Sektor Rumah Tangga
+
+```{r}
+rumahtangga <- read_csv2("rumahtangga.csv")
+rumahtangga
+```
+
+### Data Energi Sektor Komersial
+
+```{r}
+komersial <- read_csv2("komersial.csv")
+komersial
+```
+
+### Data Perubahan Iklim Emisi CO2
+
+```{r}
+karbon <- read_csv2("karbon.csv")
+karbon
+```
+
+
+### Data Perubahan Iklim Emisi Gas Rumah Kaca
+
+```{r}
+grk <- read_csv2("grk.csv")
+grk
+```
+
+### Data Perubahan Iklim Perubahan Suhu Permukaan
+
+```{r}
+temp <- read_csv("temp.csv")
+temp
+```
+
+#PENGGABUNGAN DATASET
+```{r}
+df_ind_bvar <- industri
+df_rt_bvar <- rumahtangga
+df_kom_bvar <- komersial
+
+# 2. Menambahkan identitas per kolom
+colnames(df_ind_bvar) <- paste0("Ind_", colnames(industri))
+colnames(df_rt_bvar) <- paste0("RT_", colnames(rumahtangga))
+colnames(df_kom_bvar) <- paste0("Kom_", colnames(komersial))
+
+
+df_energy_bvar <- cbind(df_ind_bvar, df_rt_bvar, df_kom_bvar)
+df_energy_bvar
+```
+
+#Cleaning Dataset
+```{r}
+# Nama kolom "Ind_Year" dan ganti dengan "Year"
+colnames(df_energy_bvar)[colnames(df_energy_bvar) == "Ind_Year"] <- "Year"
+
+# 2. Drop Kolom yang tidak dipakai
+cols_to_drop <- c("RT_Year", "Kom_Year", "Ind_Sector", "RT_Sector", "Kom_Sector")
+
+# Pilih semua kolom KECUALI (!) yang ada di daftar cols_to_drop
+df_energy_bvar <- df_energy_bvar[, !colnames(df_energy_bvar) %in% cols_to_drop]
+
+# 4. Buang baris NA
+df_energy_bvar <- na.omit(df_energy_bvar)
+
+# 5. Tampilkan data
+df_energy_bvar
+```
+
+
+```{r}
+df <- ts(df_energy_bvar[, -1],
+        start = 2000,
+        frequency = 1)
+
+df
+```
+
+
+
+# Cek Stasioneritas Dataset 
+```{r}
+library(urca)
+library(dplyr)
+
+df <- df_energy_bvar
+
+# Buang kolom Year
+vars <- df %>% select(-Year)
+
+# Hasil akhir
+result_list <- list()
+
+for (col_name in colnames(vars)) {
+  
+  series <- vars[[col_name]]
+  
+  # Uji ADF
+  adf_test <- ur.df(series, type = "trend", selectlags = "AIC")
+  p_value  <- summary(adf_test)@testreg$coefficients[2,4]
+  
+  result_list[[col_name]] <- data.frame(
+    Variable = col_name,
+    P_Value  = p_value,
+    Status   = ifelse(p_value < 0.05, "Stationary", "Non-Stationary")
+  )
+}
+
+stationarity_result <- bind_rows(result_list)
+stationarity_result
+
+```
+
+# Stasionerkan data
+```{r}
+# ================================
+# STEP 2 FINAL — Transform + ADF + Max Diff 3 + Alignment
+# ================================
+library(dplyr)
+library(tseries)    # adf.test
+library(forecast)   # ndiffs
+
+df <- df_energy_bvar
+vars <- df %>% select(-Year)
+years <- df$Year
+
+# containers
+transformed_vars <- list()
+recipe <- data.frame(
+  Variable = character(),
+  Transform = character(),
+  Diff_Applied = integer(),
+  Final_ADF_pvalue = numeric(),
+  Status = character(),
+  stringsAsFactors = FALSE
+)
+
+max_diff_allowed <- 3
+
+# helper ADF
+safe_adf_p <- function(x) {
+  x2 <- as.numeric(na.omit(x))
+  if (length(x2) < 6) return(NA)
+  tryCatch(
+    tseries::adf.test(x2)$p.value,
+    error = function(e) NA
+  )
+}
+
+for (col_name in colnames(vars)) {
+  
+  series_raw <- vars[[col_name]]
+
+  # 1) Transformasi log1p bila non-negative
+  if (all(series_raw >= 0, na.rm = TRUE)) {
+    s <- log1p(series_raw)
+    transform_label <- "log1p"
+  } else {
+    s <- series_raw
+    transform_label <- "none"
+  }
+
+  # 2) Rekomendasi differencing (ADF-based)
+  recommended_d <- tryCatch(
+    forecast::ndiffs(as.numeric(na.omit(s)), test = "adf"),
+    error = function(e) 0
+  )
+  if (is.na(recommended_d)) recommended_d <- 0
+  recommended_d <- min(recommended_d, max_diff_allowed)
+
+  # 3) Apply recommended differencing
+  applied_d <- 0
+  s_d <- s
+
+  if (recommended_d > 0) {
+    for (d in seq_len(recommended_d)) {
+      s_d <- diff(s_d)
+    }
+    applied_d <- recommended_d
+  }
+
+  # 4) Test ADF
+  p_val <- safe_adf_p(s_d)
+
+  # 5) If masih non-stationary, add diffs manually up to 3
+  while ((is.na(p_val) || p_val > 0.05) && applied_d < max_diff_allowed) {
+    s_d <- diff(s_d)
+    applied_d <- applied_d + 1
+    p_val <- safe_adf_p(s_d)
+  }
+
+  # 6) Store hasil
+  transformed_vars[[col_name]] <- s_d
+
+  recipe <- rbind(recipe, data.frame(
+    Variable = col_name,
+    Transform = transform_label,
+    Diff_Applied = applied_d,
+    Final_ADF_pvalue = round(p_val, 5),
+    Status = ifelse(!is.na(p_val) && p_val < 0.05, "Stationary", "Not Stationary"),
+    stringsAsFactors = FALSE
+  ))
+}
+
+# ================================
+# ALIGN ALL SERIES (BIAR SIAP DIPAKAI BVAR)
+# ================================
+max_diff <- max(recipe$Diff_Applied)
+orig_len <- nrow(vars)
+aligned_len <- orig_len - max_diff
+
+if (aligned_len < 6) {
+  warning("Observasi terlalu sedikit setelah differencing. BVAR mungkin tidak stabil.")
+}
+
+aligned_matrix <- matrix(NA, nrow = aligned_len, ncol = length(transformed_vars))
+colnames(aligned_matrix) <- names(transformed_vars)
+
+for (v in names(transformed_vars)) {
+  k <- recipe$Diff_Applied[recipe$Variable == v]
+  series <- transformed_vars[[v]]
+  aligned_matrix[, v] <- tail(series, aligned_len)
+}
+
+start_year <- years[1 + max_diff]
+ts_data <- ts(aligned_matrix, start = start_year, frequency = 1)
+
+# Output
+print(recipe)
+cat("\nAligned TS matrix dim:", dim(ts_data), "\n")
+cat("Start year:", start_year, "\n")
+```
+
+
+```{r}
+# list non-stationary vars dari recipe
+nonstat_vars <- recipe$Variable[is.na(recipe$Final_ADF_pvalue) | recipe$Final_ADF_pvalue > 0.05]
+cat("Non-stationary variables:\n")
+print(nonstat_vars)
+```
+
+
+
+```{r}
+library(BVAR)
+
+# ====================
+# 1. Prepare data
+# ====================
+df <- df_energy_bvar
+rownames(df) <- df$Year
+df$Year <- NULL
+
+# ====================
+# 2. Split data
+# ====================
+n <- nrow(df)
+train_n <- floor(0.85 * n)
+
+train <- df[1:train_n, ]
+test  <- df[(train_n+1):n, ]
+
+
+# ====================
+# 3. Fit BVAR on level data
+# ====================
+model <- bvar(
+  train,
+  lags = 1,
+  n_draw = 5000,
+  n_burn = 2000,
+  Verbose = TRUE
+)
+
+# ====================
+# 4. Forecast 3 years
+# ====================
+fc <- predict(model, horizon = 3)
+fc_mean <- fc$fc_mean
+
+# Assign forecast years
+forecast_years <- c(2021, 2022, 2023)
+rownames(fc_mean) <- forecast_years
+
+# ====================
+# 5. Comparison table
+# ====================
+comparison <- data.frame(
+  Year = forecast_years,
+  Actual = I(split(as.data.frame(test), rownames(test))),
+  Forecast = I(split(as.data.frame(fc_mean), rownames(fc_mean)))
+)
+
+comparison
+```
+
+
+
+
+```{r}
+# ===========================================
+# 6. Ambil forecast mean (sudah ada)
+# ===========================================
+fc_mean <- fc$fc_mean
+forecast_years <- c(2021, 2022, 2023)
+rownames(fc_mean) <- forecast_years
+
+actual  <- as.matrix(test)   
+pred    <- as.matrix(fc_mean)
+
+# ===========================================
+# 7. Evaluasi metrik fungsi utilitas
+# ===========================================
+EPS <- 1e-8   # anti pembagian 0
+
+MAE  <- function(a, p) mean(abs(a - p))
+RMSE <- function(a, p) sqrt(mean((a - p)^2))
+
+MAPE <- function(a, p) mean(abs((a - p) / (abs(a) + EPS))) * 100
+
+SMAPE <- function(a, p) {
+  num <- abs(a - p)
+  den <- (abs(a) + abs(p)) / 2
+  sm  <- ifelse(den == 0, 0, num / den)
+  mean(sm) * 100
+}
+
+# ===========================================
+# 8. GLOBAL METRICS (SEMUA VARIABEL)
+# ===========================================
+mae_global  <- MAE(actual, pred)
+rmse_global <- RMSE(actual, pred)
+mape_global <- MAPE(actual, pred)
+smape_global <- SMAPE(actual, pred)
+
+cat("\n================ GLOBAL METRICS ================\n")
+cat(sprintf("MAE   : %,.4f\n", mae_global))
+cat(sprintf("RMSE  : %,.4f\n", rmse_global))
+cat(sprintf("MAPE  : %.4f%%\n", mape_global))
+cat(sprintf("SMAPE : %.4f%%\n", smape_global))
+
+# ===========================================
+# 9. PER-VARIABLE METRICS
+# ===========================================
+features <- colnames(actual)
+metrics_list <- list()
+
+for (i in seq_along(features)) {
+  y_true <- actual[, i]
+  y_pred <- pred[, i]
+
+  metrics_list[[i]] <- data.frame(
+    Feature = features[i],
+    MAE     = MAE(y_true, y_pred),
+    RMSE    = RMSE(y_true, y_pred),
+    MAPE    = MAPE(y_true, y_pred),
+    SMAPE   = SMAPE(y_true, y_pred)
+  )
+}
+
+metrics_df <- do.call(rbind, metrics_list)
+rownames(metrics_df) <- NULL
+
+cat("\n================ PER-VARIABLE METRICS ================\n")
+print(metrics_df)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
