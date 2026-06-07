@@ -1,0 +1,1841 @@
+---
+title: "Data2BVAR"
+author: "Maulana Ihsan Athallah"
+date: "2025-12-11"
+output: word_document
+---
+
+# **BISMILLAH FINAL PROJECT**
+### **Step 3 : PEMODELAN TIPE 1**
+
+
+### 1. Panggil Library yang akan digunakan
+```{r}
+# === Paket Dasar ===
+library(tidyverse)       # gabungan dplyr, ggplot2, readr, tidyr
+library(data.table)      # manipulasi data cepat (opsional)
+library(scales)          # format angka dan sumbu
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+# === Visualisasi ===
+library(ggplot2)
+library(ggthemes)
+library(viridis)
+
+# === Standarisasi & Machine Learning ===
+library(caret)           # preprocessing (scale, center), evaluasi model
+library(recipes)         # pipeline preprocessing alternatif
+library(tseries)
+library(MASS)
+library(bestNormalize)
+
+# === Deep Learning ===
+library(keras)           # untuk LSTM, optimizer (Adam, Nadam, RMSprop)
+library(tensorflow)      # backend keras
+
+# === Evaluasi ===
+library(Metrics)         # MAE, RMSE, MSE
+
+# === Utilitas ===
+library(glue)            # string interpolation seperti f-string Python
+library(reticulate)      # kalau mau jalankan Python langsung
+library(microbenchmark)  # alternatif timeit
+```
+
+
+### Data Energi Sektor Industri
+
+```{r}
+industri <- read_csv("industri2.csv")
+industri
+```
+
+```{r}
+str(industri)
+```
+
+
+### Data Energi Sektor Rumah Tangga
+
+```{r}
+rumahtangga <- read_csv("rumahtangga2.csv")
+rumahtangga
+```
+
+### Data Energi Sektor Komersial
+
+```{r}
+komersial <- read_csv("komersial2.csv")
+komersial
+```
+
+### Data Perubahan Iklim Emisi CO2
+
+```{r}
+karbon <- read_csv("karbon.csv")
+karbon
+```
+
+
+### Data Perubahan Iklim Emisi Gas Rumah Kaca
+
+```{r}
+grk <- read_csv("grk.csv")
+grk
+```
+
+### Data Perubahan Iklim Perubahan Suhu Permukaan
+
+```{r}
+temp <- read_csv("temp.csv")
+temp
+```
+
+#PENGGABUNGAN DATASET
+```{r}
+df_ind_bvar <- industri
+df_rt_bvar <- rumahtangga
+df_kom_bvar <- komersial
+
+# 1. Menambahkan identitas (Prefix) per kolom
+colnames(df_ind_bvar) <- paste0("Ind_", colnames(industri))
+colnames(df_rt_bvar) <- paste0("RT_", colnames(rumahtangga))
+colnames(df_kom_bvar) <- paste0("Kom_", colnames(komersial))
+
+# 2. Gabungkan Data
+df_energy_bvar <- cbind(df_ind_bvar, df_rt_bvar, df_kom_bvar)
+
+# === TAMBAHAN: MEMBERSIHKAN NAMA KOLOM ===
+
+# a. Ganti Spasi " " menjadi "_"
+colnames(df_energy_bvar) <- gsub(" ", "_", colnames(df_energy_bvar))
+
+# b. Ganti Titik "." menjadi "_" 
+# Note: Kita pakai "\\." karena tanda titik dianggap karakter spesial di R
+colnames(df_energy_bvar) <- gsub("\\.", "_", colnames(df_energy_bvar))
+
+# c. (Opsional) Hapus jika ada underscore ganda "__" akibat proses di atas
+colnames(df_energy_bvar) <- gsub("__", "_", colnames(df_energy_bvar))
+
+# Tampilkan hasil
+df_energy_bvar
+```
+
+
+#Cleaning Dataset
+```{r}
+# Nama kolom "Ind_Year" dan ganti dengan "Year"
+colnames(df_energy_bvar)[colnames(df_energy_bvar) == "Ind_Year"] <- "Year"
+
+# 2. Drop Kolom yang tidak dipakai
+cols_to_drop <- c("RT_Year", "Kom_Year", "Ind_Sector", "RT_Sector", "Kom_Sector")
+
+# Pilih semua kolom KECUALI (!) yang ada di daftar cols_to_drop
+df_energy_bvar <- df_energy_bvar[, !colnames(df_energy_bvar) %in% cols_to_drop]
+
+# 4. Buang baris NA
+df_energy_bvar <- na.omit(df_energy_bvar)
+
+# Ambil semua baris dimana Year TIDAK SAMA DENGAN (!=) 2024
+df_energy_bvar <- df_energy_bvar[df_energy_bvar$Year != 2024, ]
+
+# 5. Tampilkan data
+df_energy_bvar
+```
+
+
+#Standarisasi Dataset
+```{r}
+# 1. Standarisasi Data (Z-Score)
+data_raw <- df_energy_bvar[, names(df_energy_bvar) != "Year"]
+data_scaled_obj <- scale(data_raw) 
+
+# parameter scaling
+center_vals <- attr(data_scaled_obj, "scaled:center") # Mean
+scale_vals  <- attr(data_scaled_obj, "scaled:scale")  # SD
+
+data_scaled <- as.data.frame(data_scaled_obj)
+
+cat("Preview Data Scaled:\n")
+data_scaled
+```
+
+
+#Cek Stasioneritas data : 
+```{r}
+library(tseries)
+
+# === FUNGSI CEK STASIONERITAS ===
+cek_stasioner_awal <- function(df) {
+  col_names <- names(df)
+  results <- data.frame(
+    Variable = character(),
+    P_Value = numeric(),
+    Status = character(),
+    stringsAsFactors = FALSE
+  )
+  
+  cat("--- Memeriksa Stasioneritas", length(col_names), "Variabel ---\n")
+  
+  for(col in col_names) {
+    vec_data <- na.omit(df[[col]])
+    if(var(vec_data) == 0 || length(vec_data) < 3) {
+      p_val <- NA
+      stat <- "SKIP (Konstan/Data Kurang)"
+    } else {
+      # 2. ADF Test
+      tryCatch({
+        test <- adf.test(vec_data)
+        p_val <- round(test$p.value, 4)
+        stat <- ifelse(test$p.value < 0.05, "Stasioner (Aman)", "Tidak Stasioner")
+      }, error = function(e) {
+        p_val <- NA
+        stat <- "Error ADF"
+      })
+    }
+    results <- rbind(results, data.frame(
+      Variable = col, 
+      P_Value = p_val, 
+      Status = stat
+    ))
+  }
+  
+  return(results)
+}
+
+# Cek Stasioner
+laporan_awal <- cek_stasioner_awal(data_scaled)
+laporan_awal
+```
+
+```{r}
+plot_acf_pacf_modern <- function(df, title_prefix = "Before Diff") {
+  
+  for (col in names(df)) {
+    
+    vec <- na.omit(df[[col]])
+    if (length(vec) < 5 || var(vec) == 0) next
+    
+    ts_data <- ts(vec)
+    
+    par(mfrow = c(2,1), mar = c(4,4,2,1))
+    
+    # ================= ACF =================
+    acf_obj <- acf(ts_data, plot = FALSE)
+    ci <- qnorm(0.975)/sqrt(length(ts_data))
+    
+    plot(acf_obj$lag[-1], acf_obj$acf[-1],
+         type = "h",
+         lwd = 2,
+         col = "black",
+         ylim = c(-1,1),
+         main = paste("ACF -", title_prefix, "-", col),
+         xlab = "Lag", ylab = "ACF")
+    
+    # DOT
+    points(acf_obj$lag[-1], acf_obj$acf[-1], pch = 16, col = "black")
+    
+    # CONFIDENCE AREA
+    polygon(c(acf_obj$lag[-1], rev(acf_obj$lag[-1])),
+            c(rep(ci, length(acf_obj$lag[-1])), rep(-ci, length(acf_obj$lag[-1]))),
+            col = rgb(0.2,0.4,0.8,0.2), border = NA)
+    
+    abline(h = 0, col = "red", lwd = 1)
+    
+    
+    # ================= PACF =================
+    pacf_obj <- pacf(ts_data, plot = FALSE)
+    
+    plot(pacf_obj$lag, pacf_obj$acf,
+         type = "h",
+         lwd = 2,
+         col = "black",
+         ylim = c(-1,1),
+         main = paste("PACF -", title_prefix, "-", col),
+         xlab = "Lag", ylab = "PACF")
+    
+    points(pacf_obj$lag, pacf_obj$acf, pch = 16, col = "black")
+    
+    polygon(c(pacf_obj$lag, rev(pacf_obj$lag)),
+            c(rep(ci, length(pacf_obj$lag)), rep(-ci, length(pacf_obj$lag))),
+            col = rgb(0.2,0.6,0.3,0.2), border = NA)
+    
+    abline(h = 0, col = "red", lwd = 1)
+  }
+}
+
+plot_acf_pacf_modern(data_scaled, "Before Diff (Scaled)")
+```
+
+
+
+```{r}
+library(tseries)
+
+# === FUNGSI CEK STASIONER & AUTO DIFF ===
+auto_diff_check <- function(df, max_diff = 2) {
+  col_names <- names(df)
+  n_rows_original <- nrow(df)
+  processed_list <- list()
+  
+  report_df <- data.frame(
+    Variable = character(), Order_Diff = integer(), 
+    Final_P_Value = numeric(), Status = character(), stringsAsFactors = FALSE
+  )
+  
+  for(col in col_names) {
+    current_vec <- df[[col]]
+    current_d <- 0
+    is_stationary <- FALSE
+    final_p <- NA
+    status_msg <- "Max Diff Reached"
+    
+    while(current_d <= max_diff) {
+      clean_vec <- na.omit(current_vec)
+
+      if(var(clean_vec) == 0 || length(clean_vec) < 3) {
+        status_msg <- "SKIP (Konstan/Pendek)"; final_p <- NA; break
+      }
+      
+      # Uji ADF
+      tryCatch({
+        test <- adf.test(clean_vec)
+        p_val <- test$p.value
+        
+        if(p_val < 0.05) { 
+          is_stationary <- TRUE
+          final_p <- p_val
+          status_msg <- "Stasioner"
+          break
+        } else {
+          final_p <- p_val
+        }
+      }, error = function(e) { status_msg <- "Error ADF" })
+      
+      if(!is_stationary && current_d < max_diff) {
+        current_d <- current_d + 1
+        current_vec <- diff(current_vec)
+      } else {
+        break
+      }
+    }
+    
+    pad_na <- rep(NA, n_rows_original - length(current_vec))
+    processed_list[[col]] <- c(pad_na, current_vec)
+    
+    report_df <- rbind(report_df, data.frame(
+      Variable = col, Order_Diff = current_d, 
+      Final_P_Value = round(final_p, 4), Status = status_msg
+    ))
+  }
+  
+  df_final_clean <- na.omit(as.data.frame(processed_list))
+  return(list(data = df_final_clean, summary = report_df))
+}
+
+# === EKSEKUSI ===
+hasil_auto_diff <- auto_diff_check(data_scaled, max_diff = 2)
+diff_orders <- setNames(
+  hasil_auto_diff$summary$Order_Diff,
+  hasil_auto_diff$summary$Variable
+)
+
+cat("=== Summary Auto-Diff ===\n")
+print(hasil_auto_diff$summary)
+```
+
+
+
+```{r}
+plot_acf_pacf_after_modern <- function(df, diff_orders) {
+  
+  for (col in names(df)) {
+    
+    vec <- na.omit(df[[col]])
+    if (length(vec) < 5 || var(vec) == 0) next
+    
+    ts_data <- ts(vec)
+    d <- diff_orders[col]
+    
+    par(mfrow = c(2,1), mar = c(4,4,2,1))
+    
+    ci <- qnorm(0.975)/sqrt(length(ts_data))
+    
+    # ================= ACF =================
+    acf_obj <- acf(ts_data, plot = FALSE)
+    
+    plot(acf_obj$lag[-1], acf_obj$acf[-1],
+         type = "h",
+         lwd = 2,
+         col = "black",
+         ylim = c(-1,1),
+         main = paste("ACF After Diff (d =", d, ")-", col),
+         xlab = "Lag", ylab = "ACF")
+    
+    points(acf_obj$lag[-1], acf_obj$acf[-1], pch = 16)
+    
+    polygon(c(acf_obj$lag[-1], rev(acf_obj$lag[-1])),
+            c(rep(ci, length(acf_obj$lag[-1])), rep(-ci, length(acf_obj$lag[-1]))),
+            col = rgb(0.2,0.4,0.8,0.2), border = NA)
+    
+    abline(h = 0, col = "red", lwd = 1)
+    
+    
+    # ================= PACF =================
+    pacf_obj <- pacf(ts_data, plot = FALSE)
+    
+    plot(pacf_obj$lag, pacf_obj$acf,
+         type = "h",
+         lwd = 2,
+         col = "black",
+         ylim = c(-1,1),
+         main = paste("PACF After Diff (d =", d, ")-", col),
+         xlab = "Lag", ylab = "PACF")
+    
+    points(pacf_obj$lag, pacf_obj$acf, pch = 16)
+    
+    polygon(c(pacf_obj$lag, rev(pacf_obj$lag)),
+            c(rep(ci, length(pacf_obj$lag)), rep(-ci, length(pacf_obj$lag))),
+            col = rgb(0.2,0.6,0.3,0.2), border = NA)
+    
+    abline(h = 0, col = "red", lwd = 1)
+  }
+}
+
+plot_acf_pacf_after_modern(data_ready, diff_orders)
+```
+
+
+```{r}
+library(BVAR)
+library(ggplot2)
+library(scales)
+
+# ==============================================================================
+# 1. FUNGSI REVERT (DIPERBAIKI UNTUK PENYAMBUNGAN SEMPURNA)
+# ==============================================================================
+revert_data_final <- function(raw_matrix, cols_target, is_future = FALSE) {
+  if(ncol(raw_matrix) != length(cols_target)) { raw_matrix <- t(raw_matrix) }
+  colnames(raw_matrix) <- cols_target
+  res_matrix <- raw_matrix * 0 
+  
+  diff_info <- hasil_auto_diff$summary
+  nama_bersih <- gsub("[ .]", "_", diff_info$Variable)
+  rownames(diff_info) <- nama_bersih
+  
+  # Penentuan index anchor
+  last_idx <- if(is_future) nrow(data_scaled) else (nrow(data_scaled) - n_forecast)
+  
+  for(col in cols_target) {
+    col_clean <- gsub("[ .]", "_", col)
+    d_order <- diff_info[col_clean, "Order_Diff"]
+    if(is.na(d_order)) d_order <- 0
+    
+    temp_vec <- raw_matrix[, col]
+    
+    # Revert Differencing
+    if(d_order > 0) {
+      for(i in 1:d_order) {
+        target_level <- d_order - i
+        hist_series <- if(target_level == 0) data_scaled[1:last_idx, col] else 
+                       diff(data_scaled[1:last_idx, col], differences = target_level)
+        anchor <- tail(hist_series, 1)
+        temp_vec <- cumsum(temp_vec) + anchor
+      }
+    }
+    
+    # Revert Scaling
+    sd_val <- scale_vals[col]; mean_val <- center_vals[col]
+    if(is.na(sd_val)) sd_val <- 1; if(is.na(mean_val)) mean_val <- 0
+    
+    nilai_asli <- (temp_vec * sd_val) + mean_val
+    res_matrix[, col] <- pmax(nilai_asli, 0)
+  }
+  return(res_matrix)
+}
+```
+
+```{r}
+# ==============================================================================
+# A1. SPLIT DATA
+# ==============================================================================
+n_total <- nrow(data_ready)
+n_train <- floor(0.8 * n_total)
+n_forecast <- n_total - n_train
+
+train_data <- data_ready[1:n_train, ]
+test_data  <- data_ready[(n_train + 1):n_total, ]
+cols_model <- colnames(train_data)
+```
+
+
+```{r}
+# ==============================================================================
+# A2. TRAIN MODEL
+# ==============================================================================
+library(BVAR)
+
+mn_params <- bv_mn(
+  lambda = bv_lambda(mode = 0.2, sd = 0.4, min = 1e-4, max = 5),
+  alpha = bv_alpha(mode = 2)
+)
+
+priors <- bv_priors(mn = mn_params)
+mh_setup <- bv_mh(scale_hess = 0.05)
+
+run_eval <- bvar(
+  data = train_data,
+  lags = 2,
+  priors = priors,
+  mh = mh_setup,
+  n_save = 5000,
+  n_burn = 2000,
+  verbose = FALSE
+)
+```
+
+
+```{r}
+# ==============================================================================
+# A3. PREDICT TEST
+# ==============================================================================
+preds_test <- predict(run_eval, horizon = n_forecast)
+
+forecast_test <- revert_data_final(
+  preds_test$quants[2,,],
+  cols_model,
+  is_future = FALSE
+)
+```
+
+
+```{r}
+# ==============================================================================
+# A4. EVALUASI METRIK
+# ==============================================================================
+df_actual_raw <- df_energy_bvar
+colnames(df_actual_raw) <- gsub("[ .]", "_", colnames(df_actual_raw))
+
+actual_test <- tail(df_actual_raw[, cols_model], n_forecast)
+
+calc_metrics <- function(actual, pred) {
+  e <- as.numeric(actual) - as.numeric(pred)
+  c(
+    MAE = mean(abs(e)),
+    RMSE = sqrt(mean(e^2)),
+    MAPE = mean(abs(e / (actual + 1e-10))) * 100
+  )
+}
+
+results_df <- data.frame()
+
+for(col in cols_model) {
+  vals <- calc_metrics(actual_test[[col]], forecast_test[, col])
+  
+  results_df <- rbind(results_df, data.frame(
+    Variable = col,
+    MAE = unname(vals["MAE"]),
+    RMSE = unname(vals["RMSE"]),
+    MAPE = unname(vals["MAPE"])
+  ))
+}
+
+# GLOBAL MAPE
+fmt <- function(x) format(x, big.mark=",", digits=2, nsmall=2)
+
+cat("\nGLOBAL MAE:", fmt(mean(results_df$MAE)), '\n')
+
+display_df <- results_df
+display_df$MAE  <- sapply(display_df$MAE, fmt)
+display_df$RMSE <- sapply(display_df$RMSE, fmt)
+display_df$MAPE <- paste0(sapply(display_df$MAPE, fmt), "%")
+rownames(display_df) <- NULL
+
+print(display_df, row.names = FALSE)
+```
+
+
+```{r}
+# ==============================================================================
+# A5. PLOT TEST FORECAST (WAJIB)
+# ==============================================================================
+library(ggplot2)
+library(scales)
+
+START_YEAR <- 1990
+years_hist <- seq(START_YEAR, length.out = nrow(df_actual_raw))
+years_test <- tail(years_hist, n_forecast)
+
+for(col in cols_model) {
+  
+  df_plot <- data.frame(
+    Year = years_hist,
+    Value = df_actual_raw[[col]],
+    Type = "Actual"
+  )
+  
+  err <- results_df$RMSE[results_df$Variable == col]
+  
+  df_test_f <- data.frame(
+    Year = years_test,
+    Value = forecast_test[, col],
+    Lower = pmax(forecast_test[, col] - 1.96 * err, 0),
+    Upper = forecast_test[, col] + 1.96 * err
+  )
+  
+  p <- ggplot() +
+    
+    # Actual
+    geom_line(data = df_plot,
+              aes(x = Year, y = Value, color = "Actual"),
+              size = 1) +
+    
+    # CI
+    geom_ribbon(data = df_test_f,
+                aes(x = Year, ymin = Lower, ymax = Upper, fill = "Confidence Interval"),
+                alpha = 0.2) +
+    
+    # Forecast
+    geom_line(data = df_test_f,
+              aes(x = Year, y = Value, color = "Forecast"),
+              linetype = "dashed", size = 1) +
+    
+    # Warna manual
+    scale_color_manual(
+      values = c("Actual" = "black",
+                 "Forecast" = "red")
+    ) +
+    
+    scale_fill_manual(
+      values = c("Confidence Interval" = "red")
+    ) +
+    
+    scale_y_continuous(labels = comma) +
+    
+    labs(
+      title = paste("Forecast Test Result:", col),
+      color = "Legend",
+      fill  = "Legend"
+    ) +
+    
+    theme_minimal()
+  
+  print(p)
+}
+```
+
+
+```{r}
+# ==============================================================================
+# A6. EXPORT (TEST ONLY ✅)
+# ==============================================================================
+
+df_export_forecast <- as.data.frame(forecast_test)
+
+# Tambahkan Year
+df_export_forecast$Year <- years_test
+
+# Pindahkan Year ke depan
+cols <- names(df_export_forecast)
+df_export_forecast <- df_export_forecast[, c("Year", setdiff(cols, "Year"))]
+
+# ===============================
+# METRICS (RAW NUMERIC)
+# ===============================
+df_export_metrics <- results_df
+
+# ===============================
+# SIMPAN FILE 
+# ===============================
+write.csv(df_export_forecast, "bvar_forecast_result.csv", row.names = FALSE)
+write.csv(df_export_metrics, "bvar_metrics_result.csv", row.names = FALSE)
+
+cat("\n=== EXPORT SESUAI PIPELINE LAMA ===\n")
+cat("Lokasi:", getwd(), "\n")
+```
+
+
+```{r}
+# ==============================================================================
+# B1. TRAIN FULL DATA
+# ==============================================================================
+run_final <- bvar(
+  data = data_ready,
+  lags = 2,
+  priors = priors,
+  mh = mh_setup,
+  n_save = 5000,
+  n_burn = 2000,
+  verbose = FALSE
+)
+
+n_future <- 7
+preds_future <- predict(run_final, horizon = n_future)
+
+forecast_mid <- revert_data_final(
+  preds_future$quants[2,,],
+  cols_model,
+  is_future = TRUE
+)
+```
+
+
+```{r}
+# ==============================================================================
+# B2. CI RMSE
+# ==============================================================================
+forecast_low <- forecast_mid
+forecast_upp <- forecast_mid
+
+for(col in cols_model) {
+  err <- results_df$RMSE[results_df$Variable == col]
+  forecast_low[, col] <- pmax(forecast_mid[, col] - 1.96 * err, 0)
+  forecast_upp[, col] <- forecast_mid[, col] + 1.96 * err
+}
+```
+
+
+```{r}
+# ==============================================================================
+# B3. PLOT FUTURE
+# ==============================================================================
+years_fut <- seq(tail(years_hist, 1) + 1, length.out = n_future)
+
+for(col in cols_model) {
+  
+  df_hist <- data.frame(
+    Year = years_hist,
+    Value = df_actual_raw[[col]]
+  )
+  
+  df_future <- data.frame(
+    Year = years_fut,
+    Value = forecast_mid[, col],
+    Lower = forecast_low[, col],
+    Upper = forecast_upp[, col]
+  )
+  
+  last_point <- data.frame(
+    Year = tail(years_hist, 1),
+    Value = tail(df_actual_raw[[col]], 1),
+    Lower = tail(df_actual_raw[[col]], 1),
+    Upper = tail(df_actual_raw[[col]], 1)
+  )
+  
+  df_future_plot <- rbind(last_point, df_future)
+  
+  p <- ggplot() +
+    
+    # HISTORICAL
+    geom_line(data = df_hist,
+              aes(x = Year, y = Value, color = "Historical"),
+              size = 1) +
+    
+    # CI
+    geom_ribbon(data = df_future_plot,
+                aes(x = Year, ymin = Lower, ymax = Upper, fill = "Confidence Interval"),
+                alpha = 0.2) +
+    
+    # FORECAST
+    geom_line(data = df_future_plot,
+              aes(x = Year, y = Value, color = "Forecast"),
+              linetype = "dashed", size = 1) +
+    
+    # WARNA
+    scale_color_manual(values = c(
+      "Historical" = "black",
+      "Forecast" = "red"
+    )) +
+    
+    scale_fill_manual(values = c(
+      "Confidence Interval" = "red"
+    )) +
+    
+    scale_y_continuous(labels = comma) +
+    
+    labs(
+      title = paste("Future Forecast 7 Years:", col),
+      color = "Legend",
+      fill = "Legend"
+    ) +
+    
+    theme_minimal() +
+    theme(
+      legend.position = "bottom"
+    )
+  
+  print(p)
+}
+```
+
+
+### Data Perubahan Iklim Emisi CO2
+
+```{r}
+karbon <- read_csv("karbon.csv")
+karbon
+```
+
+
+### Data Perubahan Iklim Emisi Gas Rumah Kaca
+
+```{r}
+grk <- read_csv("grk.csv")
+grk
+```
+
+### Data Perubahan Iklim Perubahan Suhu Permukaan
+
+```{r}
+temp <- read_csv("temp.csv")
+temp
+```
+
+
+```{r}
+# 1. AMBIL DATA KARBON
+# Kita bikin dataframe baru yg isinya cuma Year & Emission
+# Pake [["..."]] biar aman baca karakter aneh di nama kolom aslinya
+clean_karbon <- data.frame(
+  Year = karbon$Year, 
+  Emission_CO2 = karbon[["Emission_CO₂"]] 
+)
+
+# 2. AMBIL DATA GRK
+clean_grk <- data.frame(
+  Year = grk$Year,
+  Emission_GRK = grk$Emission_GRK
+)
+
+# 3. AMBIL DATA SUHU
+clean_temp <- data.frame(
+  Year = temp$Year,
+  Temperature = temp$Temperature
+)
+
+# 4. GABUNGKAN SEMUA (MERGE)
+# Gabung Karbon & GRK dulu
+m1 <- merge(clean_karbon, clean_grk, by = "Year", all = TRUE)
+
+# Gabung hasilnya dengan Suhu -> Jadi data_iklim final
+data_iklim <- merge(m1, clean_temp, by = "Year", all = TRUE)
+
+# 5. RAPIKAN
+# Urutkan tahun dari kecil ke besar
+data_iklim <- data_iklim[order(data_iklim$Year), ]
+
+# Hapus baris yang kosong (NA)
+data_iklim <- na.omit(data_iklim)
+
+# Reset nomor baris biar rapi (1, 2, 3...)
+rownames(data_iklim) <- NULL
+
+# 6. CEK HASIL
+cat("--- Preview Data Iklim Final ---\n")
+data_iklim
+cat("\nTotal Baris:", nrow(data_iklim))
+```
+
+
+```{r}
+# ==============================================================================
+# OTOMATISASI GRANGER CAUSALITY (ENERGI ↔ IKLIM)
+# LAG 1–5 TAHUN | SIAP TESIS
+# ==============================================================================
+
+# ======================================================
+# 0. LIBRARY
+# ======================================================
+library(lmtest)
+library(dplyr)
+
+# ======================================================
+# 1. PERSIAPAN VARIABEL & DATA
+# ======================================================
+
+# Variabel Energi (kecuali Year)
+vars_energy <- colnames(df_energy_bvar)[colnames(df_energy_bvar) != "Year"]
+
+# Variabel Iklim (kecuali Year)
+vars_iklim  <- colnames(data_iklim)[colnames(data_iklim) != "Year"]
+
+cat("Jumlah Variabel Energi :", length(vars_energy), "\n")
+cat("Jumlah Variabel Iklim  :", length(vars_iklim), "\n")
+
+# Gabungkan data berdasarkan Year
+df_combined <- merge(df_energy_bvar, data_iklim, by = "Year")
+
+# Buang kolom Year
+data_clean <- df_combined[, names(df_combined) != "Year"]
+
+# ======================================================
+# 2. DIFFERENCING (UNTUK STASIONERITAS)
+# ======================================================
+# Catatan metodologi:
+# Semua variabel di-difference satu kali sebelum uji Granger
+data_diff <- as.data.frame(lapply(data_clean, diff))
+data_diff <- na.omit(data_diff)
+
+# ======================================================
+# 3. DATAFRAME HASIL
+# ======================================================
+results_granger <- data.frame(
+  From        = character(),
+  To          = character(),
+  Lag         = integer(),
+  F_Statistic = numeric(),
+  P_Value     = numeric(),
+  Conclusion  = character(),
+  stringsAsFactors = FALSE
+)
+
+# ======================================================
+# 4. GRANGER: ENERGI → IKLIM (LAG 1–5 TAHUN)
+# ======================================================
+cat("\n--- GRANGER: ENERGI → IKLIM (Lag 1–5 Tahun) ---\n")
+
+for (lag_order in 1:5) {
+  for (v_energy in vars_energy) {
+    for (v_iklim in vars_iklim) {
+
+      if (v_energy %in% colnames(data_diff) &&
+          v_iklim  %in% colnames(data_diff)) {
+
+        tryCatch({
+          test <- grangertest(
+            data_diff[[v_iklim]] ~ data_diff[[v_energy]],
+            order = lag_order
+          )
+
+          p_val  <- test$`Pr(>F)`[2]
+          f_stat <- test$F[2]
+
+          if (!is.na(p_val) && p_val < 0.05) {
+            results_granger <- rbind(
+              results_granger,
+              data.frame(
+                From        = v_energy,
+                To          = v_iklim,
+                Lag         = lag_order,
+                F_Statistic = round(f_stat, 2),
+                P_Value     = round(p_val, 4),
+                Conclusion  = "SIGNIFIKAN"
+              )
+            )
+          }
+
+        }, error = function(e) {})
+      }
+    }
+  }
+}
+
+# ======================================================
+# 5. GRANGER: IKLIM → ENERGI (LAG 1–5 TAHUN)
+# ======================================================
+cat("\n--- GRANGER: IKLIM → ENERGI (Lag 1–5 Tahun) ---\n")
+
+for (lag_order in 1:5) {
+  for (v_iklim in vars_iklim) {
+    for (v_energy in vars_energy) {
+
+      if (v_energy %in% colnames(data_diff) &&
+          v_iklim  %in% colnames(data_diff)) {
+
+        tryCatch({
+          test <- grangertest(
+            data_diff[[v_energy]] ~ data_diff[[v_iklim]],
+            order = lag_order
+          )
+
+          p_val  <- test$`Pr(>F)`[2]
+          f_stat <- test$F[2]
+
+          if (!is.na(p_val) && p_val < 0.05) {
+            results_granger <- rbind(
+              results_granger,
+              data.frame(
+                From        = v_iklim,
+                To          = v_energy,
+                Lag         = lag_order,
+                F_Statistic = round(f_stat, 2),
+                P_Value     = round(p_val, 4),
+                Conclusion  = "SIGNIFIKAN"
+              )
+            )
+          }
+
+        }, error = function(e) {})
+      }
+    }
+  }
+}
+
+# ======================================================
+# 6. OUTPUT HASIL AKHIR
+# ======================================================
+cat("\n=== HASIL GRANGER CAUSALITY SIGNIFIKAN (Lag 1–5 Tahun) ===\n")
+
+if (nrow(results_granger) > 0) {
+  results_granger <- results_granger %>%
+    arrange(P_Value, Lag)
+
+  print(results_granger, row.names = FALSE)
+} else {
+  cat("Tidak ditemukan hubungan kausalitas yang signifikan.\n")
+}
+
+```
+
+
+```{r}
+# ======================================================
+# 7. EXPORT KE EXCEL
+# ======================================================
+if (nrow(results_granger) > 0) {
+  # Install jika belum ada: install.packages("writexl")
+  library(writexl)
+  
+  write_xlsx(results_granger, "Hasil_Granger_Signifikan.xlsx")
+  
+  cat("\n✅ Sukses! Data signifikan berhasil disimpan di 'Hasil_Granger_Signifikan.xlsx'\n")
+} else {
+  cat("\n❌ Tidak ada data signifikan, file Excel tidak dibuat.\n")
+}
+```
+
+
+
+```{r}
+# ==============================================================================
+# VISUALISASI JEJARING KAUSALITAS GRANGER (FIX PLOT MUNCUL)
+# ==============================================================================
+
+library(igraph)
+library(scales)
+library(dplyr)
+
+if (!exists("results_granger") || nrow(results_granger) == 0) {
+  stop("results_granger kosong. Jalankan Granger dulu bro.")
+}
+
+lags_available <- sort(unique(results_granger$Lag))
+
+for (lg in lags_available) {
+
+  df_lag <- results_granger %>%
+    filter(Lag == lg)
+
+  if (nrow(df_lag) > 8) {
+    df_lag <- df_lag %>%
+      filter(F_Statistic > quantile(F_Statistic, 0.6))
+  }
+
+  if (nrow(df_lag) == 0) next
+
+  edges_df <- data.frame(
+    from   = df_lag$From,
+    to     = df_lag$To,
+    weight = df_lag$F_Statistic
+  )
+
+  g <- graph_from_data_frame(edges_df, directed = TRUE)
+
+  # ======================================================
+  # NODE
+  # ======================================================
+  V(g)$type <- ifelse(
+    grepl("Emission|Temperature", V(g)$name),
+    "Climate",
+    "Energy"
+  )
+
+  V(g)$color <- ifelse(V(g)$type == "Climate", "#FF7F50", "#4DBBD5")
+  V(g)$size <- 18
+  V(g)$label <- abbreviate(V(g)$name, minlength = 6)
+  V(g)$label.cex <- 0.8
+  V(g)$frame.color <- NA
+
+  # ======================================================
+  # EDGE
+  # ======================================================
+  w_scaled <- rescale(E(g)$weight, to = c(2, 10))
+
+  E(g)$width <- w_scaled
+  E(g)$arrow.size <- rescale(E(g)$weight, to = c(0.6, 1.5))
+
+  E(g)$color <- ifelse(
+    E(g)$weight > median(E(g)$weight),
+    "#E64B35",
+    "#99999960"
+  )
+
+  E(g)$curved <- 0.2
+
+  # ======================================================
+  # LAYOUT (FIX BIAR LEBAR)
+  # ======================================================
+  set.seed(123)
+  l <- layout_with_fr(g)
+  l <- l * 1
+  l <- norm_coords(l, xmin = -0.8, xmax = 0.8, ymin = -0.8, ymax = 0.8)
+
+  # ======================================================
+  # PLOT (RESET DEVICE)
+  # ======================================================
+  plot(g, layout = l)
+
+  par(mar = c(0, 0, 3, 0))
+
+  plot(
+    g,
+    layout = l,
+    main = paste("Granger Causality Network (Lag", lg, "Year)")
+  )
+
+  legend(
+    "topleft",
+    legend = c("Energi", "Iklim", "Kuat", "Lemah"),
+    col = c("#4DBBD5", "#FF7F50", "#E64B35", "#999999"),
+    pch = c(19,19, NA, NA),
+    lty = c(NA, NA, 1, 1),
+    lwd = c(NA, NA, 3, 2),
+    bty = "n"
+  )
+}
+```
+
+
+
+
+
+```{r}
+library(dplyr)
+library(tseries)
+library(BVAR)
+library(ggplot2)
+library(scales)
+```
+
+```{r}
+library(dplyr)
+
+# ======================================================
+# 1. CEK HASIL GRANGER
+# ======================================================
+if (!exists("results_granger") || nrow(results_granger) == 0) {
+  stop("Bro, results_granger kosong. Jalankan Granger Causality dulu!")
+}
+
+# ======================================================
+# 2. IDENTIFIKASI VARIABEL ENERGI & IKLIM
+# ======================================================
+all_energy_vars  <- colnames(df_energy_bvar)[colnames(df_energy_bvar) != "Year"]
+all_climate_vars <- colnames(data_iklim)[colnames(data_iklim) != "Year"]
+
+# ======================================================
+# 3. FILTER HASIL GRANGER (SIGNIFIKAN SAJA)
+# ======================================================
+granger_sig <- results_granger %>%
+  filter(P_Value < 0.05)
+
+if (nrow(granger_sig) == 0) {
+  stop("Tidak ada hubungan Granger yang signifikan.")
+}
+
+# ======================================================
+# 4. ENERGI → IKLIM
+# ======================================================
+selected_energy_causing_climate <- granger_sig %>%
+  filter(
+    From %in% all_energy_vars,
+    To   %in% all_climate_vars
+  ) %>%
+  pull(From) %>%
+  unique()
+
+cat("=== ENERGI → IKLIM (SIGNIFIKAN, MIN. 1 LAG) ===\n")
+print(selected_energy_causing_climate)
+
+# ======================================================
+# 5. IKLIM → ENERGI
+# ======================================================
+selected_energy_affected_by_climate <- granger_sig %>%
+  filter(
+    From %in% all_climate_vars,
+    To   %in% all_energy_vars
+  ) %>%
+  pull(To) %>%
+  unique()
+
+cat("\n=== ENERGI DIPENGARUHI IKLIM (SIGNIFIKAN, MIN. 1 LAG) ===\n")
+print(selected_energy_affected_by_climate)
+
+# ======================================================
+# 6. GABUNGKAN VARIABEL ENERGI (ANTI DOBEL)
+# ======================================================
+final_energy_vars <- unique(
+  c(
+    selected_energy_causing_climate,
+    selected_energy_affected_by_climate
+  )
+)
+
+if (length(final_energy_vars) == 0) {
+  stop("Tidak ada variabel Energi yang lolos seleksi Granger.")
+}
+
+cat("\n=== FINAL VARIABEL ENERGI (HASIL GRANGER) ===\n")
+print(final_energy_vars)
+
+# ======================================================
+# 7. GABUNGKAN DATA IKLIM + ENERGI TERPILIH
+# ======================================================
+df_selected_energy <- df_energy_bvar[, c("Year", final_energy_vars), drop = FALSE]
+
+df_model_final <- merge(
+  data_iklim,
+  df_selected_energy,
+  by = "Year"
+)
+
+# Urutkan berdasarkan waktu
+df_model_final <- df_model_final[order(df_model_final$Year), ]
+
+# ======================================================
+# 8. CEK HASIL AKHIR
+# ======================================================
+cat("\n--- DATA FINAL SIAP MODELING (ENERGI ↔ IKLIM) ---\n")
+cat("Total Kolom:", ncol(df_model_final), "\n")
+print(colnames(df_model_final))
+head(df_model_final)
+```
+
+
+```{r}
+# ==========================================
+# 0. LIBRARY
+# ==========================================
+library(BVAR)
+library(ggplot2)
+library(tseries)
+
+# ==========================================
+# 1. PREPROCESSING
+# ==========================================
+data_raw <- df_model_final[, names(df_model_final) != "Year"]
+
+data_scaled_obj <- scale(data_raw)
+center_vals <- attr(data_scaled_obj, "scaled:center")
+scale_vals  <- attr(data_scaled_obj, "scaled:scale")
+
+data_scaled <- as.data.frame(data_scaled_obj)
+```
+
+#Cek Stasioneritas data : 
+```{r}
+library(tseries)
+
+# === FUNGSI CEK STASIONERITAS ===
+cek_stasioner_awal <- function(df) {
+  col_names <- names(df)
+  results <- data.frame(
+    Variable = character(),
+    P_Value = numeric(),
+    Status = character(),
+    stringsAsFactors = FALSE
+  )
+  
+  cat("--- Memeriksa Stasioneritas", length(col_names), "Variabel ---\n")
+  
+  for(col in col_names) {
+    vec_data <- na.omit(df[[col]])
+    if(var(vec_data) == 0 || length(vec_data) < 3) {
+      p_val <- NA
+      stat <- "SKIP (Konstan/Data Kurang)"
+    } else {
+      # 2. ADF Test
+      tryCatch({
+        test <- adf.test(vec_data)
+        p_val <- round(test$p.value, 4)
+        stat <- ifelse(test$p.value < 0.05, "Stasioner (Aman)", "Tidak Stasioner")
+      }, error = function(e) {
+        p_val <- NA
+        stat <- "Error ADF"
+      })
+    }
+    results <- rbind(results, data.frame(
+      Variable = col, 
+      P_Value = p_val, 
+      Status = stat
+    ))
+  }
+  
+  return(results)
+}
+
+# Cek Stasioner
+laporan_awal <- cek_stasioner_awal(data_scaled)
+laporan_awal
+```
+
+```{r}
+plot_acf_pacf_modern <- function(df, title_prefix = "Before Diff") {
+  
+  for (col in names(df)) {
+    
+    vec <- na.omit(df[[col]])
+    if (length(vec) < 5 || var(vec) == 0) next
+    
+    ts_data <- ts(vec)
+    
+    par(mfrow = c(2,1), mar = c(4,4,2,1))
+    
+    # ================= ACF =================
+    acf_obj <- acf(ts_data, plot = FALSE)
+    ci <- qnorm(0.975)/sqrt(length(ts_data))
+    
+    plot(acf_obj$lag[-1], acf_obj$acf[-1],
+         type = "h",
+         lwd = 2,
+         col = "black",
+         ylim = c(-1,1),
+         main = paste("ACF -", title_prefix, "-", col),
+         xlab = "Lag", ylab = "ACF")
+    
+    # DOT
+    points(acf_obj$lag[-1], acf_obj$acf[-1], pch = 16, col = "black")
+    
+    # CONFIDENCE AREA
+    polygon(c(acf_obj$lag[-1], rev(acf_obj$lag[-1])),
+            c(rep(ci, length(acf_obj$lag[-1])), rep(-ci, length(acf_obj$lag[-1]))),
+            col = rgb(0.2,0.4,0.8,0.2), border = NA)
+    
+    abline(h = 0, col = "red", lwd = 1)
+    
+    
+    # ================= PACF =================
+    pacf_obj <- pacf(ts_data, plot = FALSE)
+    
+    plot(pacf_obj$lag, pacf_obj$acf,
+         type = "h",
+         lwd = 2,
+         col = "black",
+         ylim = c(-1,1),
+         main = paste("PACF -", title_prefix, "-", col),
+         xlab = "Lag", ylab = "PACF")
+    
+    points(pacf_obj$lag, pacf_obj$acf, pch = 16, col = "black")
+    
+    polygon(c(pacf_obj$lag, rev(pacf_obj$lag)),
+            c(rep(ci, length(pacf_obj$lag)), rep(-ci, length(pacf_obj$lag))),
+            col = rgb(0.2,0.6,0.3,0.2), border = NA)
+    
+    abline(h = 0, col = "red", lwd = 1)
+  }
+}
+
+plot_acf_pacf_modern(data_scaled, "Before Diff (Scaled)")
+```
+
+```{r}
+# ==========================================
+# 2. AUTO DIFFERENCING
+# ==========================================
+auto_diff_check <- function(df, max_diff = 2) {
+  
+  processed <- list()
+  diff_orders <- c()
+  last_values <- list()
+  summary_list <- list()
+  
+  for (col in names(df)) {
+    
+    vec <- df[[col]]
+    original <- vec
+    d <- 0
+    p_val <- NA
+    
+    repeat {
+      test <- adf.test(na.omit(vec))
+      p_val <- test$p.value
+      
+      if (p_val < 0.05 || d == max_diff) break
+      
+      vec <- diff(vec)
+      d <- d + 1
+    }
+    
+    # simpan hasil differencing
+    processed[[col]] <- c(rep(NA, nrow(df) - length(vec)), vec)
+    diff_orders[col] <- d
+    last_values[[col]] <- tail(original, d + 1)
+    
+    # status
+    status <- ifelse(p_val < 0.05, "Stasioner", "Max Diff Reached")
+    
+    # simpan summary
+    summary_list[[col]] <- data.frame(
+      Variable = col,
+      Order_Diff = d,
+      Final_P_Value = round(p_val, 4),
+      Status = status
+    )
+  }
+  
+  summary_df <- do.call(rbind, summary_list)
+  
+  return(list(
+    data = na.omit(as.data.frame(processed)),
+    diff_orders = diff_orders,
+    last_values = last_values,
+    summary = summary_df
+  ))
+}
+
+hasil_diff <- auto_diff_check(data_scaled)
+
+data_ready  <- hasil_diff$data
+diff_orders <- hasil_diff$diff_orders
+last_values <- hasil_diff$last_values
+
+cat("\n=== Summary Auto-Diff ===\n")
+print(hasil_diff$summary, row.names = FALSE)
+```
+
+
+```{r}
+plot_acf_pacf_after_modern <- function(df, diff_orders) {
+  
+  for (col in names(df)) {
+    
+    vec <- na.omit(df[[col]])
+    if (length(vec) < 5 || var(vec) == 0) next
+    
+    ts_data <- ts(vec)
+    d <- diff_orders[col]
+    
+    par(mfrow = c(2,1), mar = c(4,4,2,1))
+    
+    ci <- qnorm(0.975)/sqrt(length(ts_data))
+    
+    # ================= ACF =================
+    acf_obj <- acf(ts_data, plot = FALSE)
+    
+    plot(acf_obj$lag[-1], acf_obj$acf[-1],
+         type = "h",
+         lwd = 2,
+         col = "black",
+         ylim = c(-1,1),
+         main = paste("ACF After Diff (d =", d, ")-", col),
+         xlab = "Lag", ylab = "ACF")
+    
+    points(acf_obj$lag[-1], acf_obj$acf[-1], pch = 16)
+    
+    polygon(c(acf_obj$lag[-1], rev(acf_obj$lag[-1])),
+            c(rep(ci, length(acf_obj$lag[-1])), rep(-ci, length(acf_obj$lag[-1]))),
+            col = rgb(0.2,0.4,0.8,0.2), border = NA)
+    
+    abline(h = 0, col = "red", lwd = 1)
+    
+    
+    # ================= PACF =================
+    pacf_obj <- pacf(ts_data, plot = FALSE)
+    
+    plot(pacf_obj$lag, pacf_obj$acf,
+         type = "h",
+         lwd = 2,
+         col = "black",
+         ylim = c(-1,1),
+         main = paste("PACF After Diff (d =", d, ")-", col),
+         xlab = "Lag", ylab = "PACF")
+    
+    points(pacf_obj$lag, pacf_obj$acf, pch = 16)
+    
+    polygon(c(pacf_obj$lag, rev(pacf_obj$lag)),
+            c(rep(ci, length(pacf_obj$lag)), rep(-ci, length(pacf_obj$lag))),
+            col = rgb(0.2,0.6,0.3,0.2), border = NA)
+    
+    abline(h = 0, col = "red", lwd = 1)
+  }
+}
+
+plot_acf_pacf_after_modern(data_ready, diff_orders)
+```
+
+
+```{r}
+# ==========================================
+# 3. SPLIT
+# ==========================================
+N_TEST <- 7
+n_total <- nrow(data_ready)
+
+train_data <- data_ready[1:(n_total - N_TEST), ]
+test_data  <- data_ready[(n_total - N_TEST + 1):n_total, ]
+
+target_cols <- c("Temperature", "Emission_GRK", "Emission_CO2")
+```
+
+```{r}
+# ==========================================
+# 4. INVERSE FUNCTION
+# ==========================================
+inverse_diff_auto <- function(pred_matrix, last_vals, diff_orders) {
+  
+  out <- as.data.frame(pred_matrix)
+  colnames(out) <- names(diff_orders)
+  
+  for (col in names(diff_orders)) {
+    
+    d <- diff_orders[col]
+    if (d == 0) next
+    
+    series <- out[[col]]
+    last_val <- last_vals[[col]]
+    
+    for (i in 1:length(series)) {
+      if (i == 1) {
+        series[i] <- last_val[length(last_val)] + series[i]
+      } else {
+        series[i] <- series[i-1] + series[i]
+      }
+    }
+    
+    out[[col]] <- series
+  }
+  
+  return(out)
+}
+
+revert_scale <- function(df) {
+  for (col in names(df)) {
+    df[[col]] <- df[[col]] * scale_vals[col] + center_vals[col]
+  }
+  return(df)
+}
+```
+
+```{r}
+# ==========================================
+# 5. PARAMETER FINAL
+# ==========================================
+best_lags   <- 1
+best_lambda <- 0.2
+best_alpha  <- 1
+
+# ==========================================
+# 6. MODEL TRAIN
+# ==========================================
+priors <- bv_priors(
+  mn = bv_mn(
+    lambda = bv_lambda(mode = best_lambda, sd = 0.0001),
+    alpha  = bv_alpha(mode = best_alpha, sd = 0.5)
+  )
+)
+
+model <- bvar(
+  data = train_data,
+  lags = best_lags,
+  priors = priors,
+  n_save = 12000,
+  n_burn = 5000
+)
+```
+
+
+```{r}
+# ==========================================
+# 7. FORECAST TEST
+# ==========================================
+preds <- predict(model, horizon = N_TEST)
+mean_diff <- apply(preds$fcast, c(2,3), mean)
+
+pred_level  <- inverse_diff_auto(mean_diff, last_values, diff_orders)
+forecast_median <- revert_scale(pred_level)
+
+# ==========================================
+# 8. EVALUASI + RMSE CI
+# ==========================================
+results <- data.frame()
+
+actual_test <- tail(df_model_final[, target_cols], N_TEST)
+
+forecast_upper_rmse <- forecast_median
+forecast_lower_rmse <- forecast_median
+
+for (col in target_cols) {
+  
+  act  <- actual_test[[col]]
+  pred <- forecast_median[[col]]
+  
+  mae  <- mean(abs(act - pred))
+  rmse <- sqrt(mean((act - pred)^2))
+  mape <- mean(abs((act - pred)/(act+1e-10))) * 100
+  
+  margin <- 1.96 * rmse
+  
+  forecast_upper_rmse[[col]] <- pred + margin
+  forecast_lower_rmse[[col]] <- pred - margin
+  
+  results <- rbind(results, data.frame(
+    Variable=col, MAE=mae, RMSE=rmse, MAPE=mape
+  ))
+}
+
+cat("\n===== HASIL AKURASI TEST =====\n")
+print(results)
+```
+
+
+```{r}
+# ==========================================
+# 9. VISUAL FORECAST TEST (WAJIB ADA)
+# ==========================================
+for(col in target_cols) {
+
+  df_hist <- data.frame(
+    Year = df_model_final$Year,
+    Value = df_model_final[[col]]
+  )
+
+  df_fore <- data.frame(
+    Year   = tail(df_model_final$Year, N_TEST),
+    Value  = forecast_median[[col]],
+    Lower  = forecast_lower_rmse[[col]],
+    Upper  = forecast_upper_rmse[[col]]
+  )
+
+  p <- ggplot() +
+    
+    # ACTUAL
+    geom_line(data = df_hist,
+              aes(x = Year, y = Value, color = "Actual"),
+              size = 1) +
+    
+    # CI
+    geom_ribbon(data = df_fore,
+                aes(x = Year, ymin = Lower, ymax = Upper, fill = "Confidence Interval"),
+                alpha = 0.25) +
+    
+    # FORECAST
+    geom_line(data = df_fore,
+              aes(x = Year, y = Value, color = "Forecast"),
+              linetype = "dashed", size = 1) +
+    
+    # WARNA
+    scale_color_manual(values = c(
+      "Actual" = "black",
+      "Forecast" = "blue"
+    )) +
+    
+    scale_fill_manual(values = c(
+      "Confidence Interval" = "blue"
+    )) +
+    
+    theme_minimal() +
+    
+    labs(
+      title = paste("Forecast Test Result:", col),
+      color = "Legend",
+      fill  = "Legend"
+    ) +
+    
+    theme(
+      legend.position = "bottom"
+    )
+
+  print(p)
+}
+```
+
+```{r}
+# ==========================================
+# 9B. TABEL FORECAST TEST
+# ==========================================
+df_forecast_test <- data.frame()
+
+for (col in target_cols) {
+  
+  df_temp <- data.frame(
+    Variable = col,
+    Year = tail(df_model_final$Year, N_TEST),
+    CI_Upper = forecast_upper_rmse[[col]],
+    Forecast = forecast_median[[col]],
+    CI_Lower = forecast_lower_rmse[[col]]
+  )
+  
+  df_forecast_test <- rbind(df_forecast_test, df_temp)
+}
+
+cat("\n===== HASIL FORECAST TEST =====\n")
+print(df_forecast_test)
+```
+
+
+```{r}
+# ==========================================
+# 10. TRAIN FINAL (FULL DATA)
+# ==========================================
+model_full <- bvar(
+  data = data_ready,
+  lags = best_lags,
+  priors = priors,
+  n_save = 12000,
+  n_burn = 5000
+)
+
+# ==========================================
+# 11. FORECAST FUTURE 7 TAHUN
+# ==========================================
+H <- 7
+
+preds_future <- predict(model_full, horizon = H)
+mean_diff_f <- apply(preds_future$fcast, c(2,3), mean)
+
+pred_level_f <- inverse_diff_auto(mean_diff_f, last_values, diff_orders)
+forecast_future <- revert_scale(pred_level_f)
+
+# ==========================================
+# 12. CI BERDASARKAN RMSE
+# ==========================================
+rmse_vals <- setNames(results$RMSE, results$Variable)
+
+forecast_upper_f <- forecast_future
+forecast_lower_f <- forecast_future
+
+for (col in target_cols) {
+  margin <- 1.96 * rmse_vals[col]
+  
+  forecast_upper_f[[col]] <- forecast_future[[col]] + margin
+  forecast_lower_f[[col]] <- forecast_future[[col]] - margin
+}
+
+# ==========================================
+# 13. TAHUN FUTURE
+# ==========================================
+last_year <- max(df_model_final$Year)
+future_years <- seq(last_year + 1, by = 1, length.out = H)
+
+# ==========================================
+# 14. TABEL FINAL
+# ==========================================
+df_forecast_final <- data.frame()
+
+for (col in target_cols) {
+  
+  df_temp <- data.frame(
+    Variable = col,
+    Year = future_years,
+    CI_Upper = forecast_upper_f[[col]],
+    Forecast = forecast_future[[col]],
+    CI_Lower = forecast_lower_f[[col]]
+  )
+  
+  df_forecast_final <- rbind(df_forecast_final, df_temp)
+}
+
+cat("\n===== HASIL FORECAST 7 TAHUN =====\n")
+print(df_forecast_final)
+```
+
+```{r}
+
+# ==========================================
+# 15. VISUAL FUTURE
+# ==========================================
+for(col in target_cols) {
+
+  df_hist <- data.frame(
+    Year = df_model_final$Year,
+    Value = df_model_final[[col]]
+  )
+
+  df_future <- data.frame(
+    Year   = future_years,
+    Value  = forecast_future[[col]],
+    Lower  = forecast_lower_f[[col]],
+    Upper  = forecast_upper_f[[col]]
+  )
+
+  p <- ggplot() +
+    
+    # HISTORICAL
+    geom_line(data = df_hist,
+              aes(x = Year, y = Value, color = "Historical"),
+              size = 1) +
+    
+    # CI
+    geom_ribbon(data = df_future,
+                aes(x = Year, ymin = Lower, ymax = Upper, fill = "Confidence Interval"),
+                alpha = 0.25) +
+    
+    # FORECAST
+    geom_line(data = df_future,
+              aes(x = Year, y = Value, color = "Forecast"),
+              linetype = "dashed", size = 1) +
+    
+    # WARNA
+    scale_color_manual(values = c(
+      "Historical" = "black",
+      "Forecast" = "red"
+    )) +
+    
+    scale_fill_manual(values = c(
+      "Confidence Interval" = "red"
+    )) +
+    
+    theme_minimal() +
+    
+    labs(
+      title = paste("FORECAST 7 TAHUN BVAR:", col),
+      subtitle = "Future Projection with RMSE-Based Confidence Interval",
+      color = "Legend",
+      fill  = "Legend"
+    ) +
+    
+    theme(
+      legend.position = "bottom"
+    )
+
+  print(p)
+}
+```
+
+
+```{r}
+# ==========================================
+# EXPORT TEST FORECAST (IKLIM)
+# ==========================================
+
+write.csv(df_forecast_test,
+          "forecast_test_BVARiklim.csv",
+          row.names = FALSE)
+
+cat("\nFile forecast_test_BVARiklim.csv berhasil disimpan\n")
+
+# ==========================================
+# EXPORT METRICS
+# ==========================================
+
+write.csv(results,
+          "metrics_evaluation_BVARiklim.csv",
+          row.names = FALSE)
+
+cat("File metrics_evaluation_BVARiklim.csv berhasil disimpan\n")
+
+# ==========================================
+# EXPORT FUTURE FORECAST (IKLIM)
+# ==========================================
+
+write.csv(df_forecast_final,
+          "forecast_future_7years_BVARiklim.csv",
+          row.names = FALSE)
+
+cat("File forecast_future_7years_BVARiklim.csv berhasil disimpan\n")
+```
+
+
+
