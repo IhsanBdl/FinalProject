@@ -1,0 +1,1446 @@
+---
+title: "BVARBISMILLAH"
+author: "Maulana Ihsan Athallah"
+date: "2025-11-20"
+output: pdf_document
+---
+
+# **BISMILLAH FINAL PROJECT**
+### **Step 3 : PEMODELAN TIPE 1**
+
+
+### 1. Panggil Library yang akan digunakan
+```{r}
+# === Paket Dasar ===
+library(tidyverse)       # gabungan dplyr, ggplot2, readr, tidyr
+library(data.table)      # manipulasi data cepat (opsional)
+library(scales)          # format angka dan sumbu
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+# === Visualisasi ===
+library(ggplot2)
+library(ggthemes)
+library(viridis)
+
+# === Standarisasi & Machine Learning ===
+library(caret)           # preprocessing (scale, center), evaluasi model
+library(recipes)         # pipeline preprocessing alternatif
+library(tseries)
+library(MASS)
+library(bestNormalize)
+
+# === Deep Learning ===
+library(keras)           # untuk LSTM, optimizer (Adam, Nadam, RMSprop)
+library(tensorflow)      # backend keras
+
+# === Evaluasi ===
+library(Metrics)         # MAE, RMSE, MSE
+
+# === Utilitas ===
+library(glue)            # string interpolation seperti f-string Python
+library(reticulate)      # kalau mau jalankan Python langsung
+library(microbenchmark)  # alternatif timeit
+```
+
+
+### Data Energi Sektor Industri
+
+```{r}
+industri <- read_csv("industri.csv")
+industri
+```
+
+```{r}
+str(industri)
+```
+
+
+### Data Energi Sektor Rumah Tangga
+
+```{r}
+rumahtangga <- read_csv("rumahtangga.csv")
+rumahtangga
+```
+
+### Data Energi Sektor Komersial
+
+```{r}
+komersial <- read_csv("komersial.csv")
+komersial
+```
+
+### Data Perubahan Iklim Emisi CO2
+
+```{r}
+karbon <- read_csv("karbon.csv")
+karbon
+```
+
+
+### Data Perubahan Iklim Emisi Gas Rumah Kaca
+
+```{r}
+grk <- read_csv("grk.csv")
+grk
+```
+
+### Data Perubahan Iklim Perubahan Suhu Permukaan
+
+```{r}
+temp <- read_csv("temp.csv")
+temp
+```
+
+#PENGGABUNGAN DATASET
+```{r}
+df_ind_bvar <- industri
+df_rt_bvar <- rumahtangga
+df_kom_bvar <- komersial
+
+# 1. Menambahkan identitas (Prefix) per kolom
+colnames(df_ind_bvar) <- paste0("Ind_", colnames(industri))
+colnames(df_rt_bvar) <- paste0("RT_", colnames(rumahtangga))
+colnames(df_kom_bvar) <- paste0("Kom_", colnames(komersial))
+
+# 2. Gabungkan Data
+df_energy_bvar <- cbind(df_ind_bvar, df_rt_bvar, df_kom_bvar)
+
+# === TAMBAHAN: MEMBERSIHKAN NAMA KOLOM ===
+
+# a. Ganti Spasi " " menjadi "_"
+colnames(df_energy_bvar) <- gsub(" ", "_", colnames(df_energy_bvar))
+
+# b. Ganti Titik "." menjadi "_" 
+# Note: Kita pakai "\\." karena tanda titik dianggap karakter spesial di R
+colnames(df_energy_bvar) <- gsub("\\.", "_", colnames(df_energy_bvar))
+
+# c. (Opsional) Hapus jika ada underscore ganda "__" akibat proses di atas
+colnames(df_energy_bvar) <- gsub("__", "_", colnames(df_energy_bvar))
+
+# Tampilkan hasil
+df_energy_bvar
+```
+
+
+#Cleaning Dataset
+```{r}
+# Nama kolom "Ind_Year" dan ganti dengan "Year"
+colnames(df_energy_bvar)[colnames(df_energy_bvar) == "Ind_Year"] <- "Year"
+
+# 2. Drop Kolom yang tidak dipakai
+cols_to_drop <- c("RT_Year", "Kom_Year", "Ind_Sector", "RT_Sector", "Kom_Sector")
+
+# Pilih semua kolom KECUALI (!) yang ada di daftar cols_to_drop
+df_energy_bvar <- df_energy_bvar[, !colnames(df_energy_bvar) %in% cols_to_drop]
+
+# 4. Buang baris NA
+df_energy_bvar <- na.omit(df_energy_bvar)
+
+# Ambil semua baris dimana Year TIDAK SAMA DENGAN (!=) 2024
+df_energy_bvar <- df_energy_bvar[df_energy_bvar$Year != 2024, ]
+
+# 5. Tampilkan data
+df_energy_bvar
+```
+
+
+#Standarisasi Dataset
+```{r}
+# 1. Standarisasi Data (Z-Score)
+data_raw <- df_energy_bvar[, names(df_energy_bvar) != "Year"]
+data_scaled_obj <- scale(data_raw) 
+
+# parameter scaling
+center_vals <- attr(data_scaled_obj, "scaled:center") # Mean
+scale_vals  <- attr(data_scaled_obj, "scaled:scale")  # SD
+
+data_scaled <- as.data.frame(data_scaled_obj)
+
+cat("Preview Data Scaled:\n")
+data_scaled
+```
+
+
+#Cek Stasioneritas data : 
+```{r}
+library(tseries)
+
+# === FUNGSI CEK STASIONERITAS ===
+cek_stasioner_awal <- function(df) {
+  col_names <- names(df)
+  results <- data.frame(
+    Variable = character(),
+    P_Value = numeric(),
+    Status = character(),
+    stringsAsFactors = FALSE
+  )
+  
+  cat("--- Memeriksa Stasioneritas", length(col_names), "Variabel ---\n")
+  
+  for(col in col_names) {
+    vec_data <- na.omit(df[[col]])
+    if(var(vec_data) == 0 || length(vec_data) < 3) {
+      p_val <- NA
+      stat <- "SKIP (Konstan/Data Kurang)"
+    } else {
+      # 2. ADF Test
+      tryCatch({
+        test <- adf.test(vec_data)
+        p_val <- round(test$p.value, 4)
+        stat <- ifelse(test$p.value < 0.05, "Stasioner (Aman)", "Tidak Stasioner")
+      }, error = function(e) {
+        p_val <- NA
+        stat <- "Error ADF"
+      })
+    }
+    results <- rbind(results, data.frame(
+      Variable = col, 
+      P_Value = p_val, 
+      Status = stat
+    ))
+  }
+  
+  return(results)
+}
+
+# Cek Stasioner
+laporan_awal <- cek_stasioner_awal(data_scaled)
+laporan_awal
+```
+
+
+
+```{r}
+library(tseries)
+
+# === FUNGSI CEK STASIONER & AUTO DIFF ===
+auto_diff_check <- function(df, max_diff = 1) {
+  col_names <- names(df)
+  n_rows_original <- nrow(df)
+  processed_list <- list()
+  
+  report_df <- data.frame(
+    Variable = character(), Order_Diff = integer(), 
+    Final_P_Value = numeric(), Status = character(), stringsAsFactors = FALSE
+  )
+  
+  for(col in col_names) {
+    current_vec <- df[[col]]
+    current_d <- 0
+    is_stationary <- FALSE
+    final_p <- NA
+    status_msg <- "Max Diff Reached"
+    
+    while(current_d <= max_diff) {
+      clean_vec <- na.omit(current_vec)
+
+      if(var(clean_vec) == 0 || length(clean_vec) < 3) {
+        status_msg <- "SKIP (Konstan/Pendek)"; final_p <- NA; break
+      }
+      
+      # Uji ADF
+      tryCatch({
+        test <- adf.test(clean_vec)
+        p_val <- test$p.value
+        
+        if(p_val < 0.05) { 
+          is_stationary <- TRUE
+          final_p <- p_val
+          status_msg <- "Stasioner"
+          break
+        } else {
+          final_p <- p_val
+        }
+      }, error = function(e) { status_msg <- "Error ADF" })
+      
+      if(!is_stationary && current_d < max_diff) {
+        current_d <- current_d + 1
+        current_vec <- diff(current_vec)
+      } else {
+        break
+      }
+    }
+    
+    pad_na <- rep(NA, n_rows_original - length(current_vec))
+    processed_list[[col]] <- c(pad_na, current_vec)
+    
+    report_df <- rbind(report_df, data.frame(
+      Variable = col, Order_Diff = current_d, 
+      Final_P_Value = round(final_p, 4), Status = status_msg
+    ))
+  }
+  
+  df_final_clean <- na.omit(as.data.frame(processed_list))
+  return(list(data = df_final_clean, summary = report_df))
+}
+
+# === EKSEKUSI ===
+hasil_auto_diff <- auto_diff_check(data_scaled, max_diff = 1)
+data_ready <- hasil_auto_diff$data
+
+cat("=== Summary Auto-Diff ===\n")
+print(hasil_auto_diff$summary)
+```
+
+#Train Test Split
+`
+# 1. Setup Split
+n_forecast <- 3
+n_total <- nrow(data_ready)
+n_train <- n_total - n_forecast
+
+train_data <- data_ready[1:n_train, ]
+test_data  <- data_ready[(n_train + 1):n_total, ]
+
+# 2. Buang Kolom Bermasalah (Kolom 28)
+# Kita hardcode index 28 sesuai temuan sebelumnya
+if(ncol(train_data) >= 8) {
+  col_error <- colnames(train_data)[8]
+  cat("Membuang variabel error:", col_error, "\n")
+  
+  train_data_fix <- train_data[, -8]
+  test_data_fix  <- test_data[, -8]
+} else {
+  train_data_fix <- train_data
+  test_data_fix <- test_data
+  cat("Kolom kurang dari 28, tidak ada yang dibuang.\n")
+}
+
+cat("Dimensi Train Data Final:", dim(train_data_fix), "\n")
+
+
+# 2. Buang Kolom Bermasalah (Kolom 8 dan 9)
+# Gunakan c(8, 9) untuk memilih dua kolom sekaligus
+cols_to_drop <- c(8, 9) 
+
+# Cek apakah jumlah kolom cukup (minimal 9)
+if(ncol(train_data) >= max(cols_to_drop)) {
+  
+  # Ambil nama kolom yang mau dibuang buat laporan
+  col_names_drop <- colnames(train_data)[cols_to_drop]
+  cat("Membuang variabel error:", paste(col_names_drop, collapse = " & "), "\n")
+  
+  # Lakukan pembuangan pakai tanda minus pada vector c(8, 9)
+  train_data_fix <- train_data[, -cols_to_drop]
+  test_data_fix  <- test_data[, -cols_to_drop]
+  
+} else {
+  train_data_fix <- train_data
+  test_data_fix  <- test_data
+  cat("Jumlah kolom kurang dari 9, tidak ada yang dibuang.\n")
+}
+
+cat("Dimensi Train Data Final:", dim(train_data_fix), "\n")
+
+
+
+
+```{r}
+# 1. Setup Split
+n_forecast <- 3
+n_total <- nrow(data_ready)
+n_train <- n_total - n_forecast
+
+train_data <- data_ready[1:n_train, ]
+test_data  <- data_ready[(n_train + 1):n_total, ]
+
+# 2. Buang Kolom Bermasalah (Kolom 28)
+# Kita hardcode index 28 sesuai temuan sebelumnya
+if(ncol(train_data) >= 8) {
+  col_error <- colnames(train_data)[8]
+  cat("Membuang variabel error:", col_error, "\n")
+  
+  train_data_fix <- train_data[, -8]
+  test_data_fix  <- test_data[, -8]
+} else {
+  train_data_fix <- train_data
+  test_data_fix <- test_data
+  cat("Kolom kurang dari 28, tidak ada yang dibuang.\n")
+}
+
+cat("Dimensi Train Data Final:", dim(train_data_fix), "\n")
+```
+
+
+
+```{r}
+library(BVAR)
+
+# 1. Setup Prior (Sama seperti sebelumnya)
+mn_params <- bv_mn(
+  lambda = bv_lambda(mode = 0.2, sd = 0.4, min = 1e-4, max = 5),
+  alpha = bv_alpha(mode = 2)
+)
+priors <- bv_priors(mn = mn_params)
+
+# 2. SETUP SAMPLING (INI YANG DIPERBAIKI)
+mh_setup <- bv_mh(scale_hess = 0.05) 
+
+# 3. RUN MODEL (Pakai data fix tanpa kolom 28)
+cat("--- SEDANG MELATIH MODEL BVAR (FINAL)... ---\n")
+
+run_bvar <- bvar(
+  data = train_data,  # Data bersih
+  lags = 1,           
+  priors = priors,    
+  mh = mh_setup,      
+  n_save = 1500,
+  n_burn = 1000,
+  verbose = TRUE
+)
+
+# 4. Hasil
+cat("\n--- Hasil Model BVAR ---\n")
+print(run_bvar)
+plot(run_bvar)
+```
+
+
+
+```{r}
+# 1. Predict
+cols_model <- colnames(train_data)
+preds <- predict(run_bvar, horizon = n_forecast)
+raw_pred <- preds$quants[2,,] # Ambil Median
+
+# Rotasi matriks kalau bentuknya kebalik
+if(ncol(raw_pred) != length(cols_model)) { raw_pred <- t(raw_pred) }
+colnames(raw_pred) <- cols_model
+
+# 2. Siapkan Metadata Revert
+diff_info <- hasil_auto_diff$summary
+rownames(diff_info) <- diff_info$Variable
+last_train_idx <- nrow(data_scaled) - n_forecast
+forecast_asli <- raw_pred * 0 
+
+# 3. Proses Reverting (The Logic)
+cat("--- Mengembalikan data ke skala asli ---\n")
+
+for(col in cols_model) {
+  # Cek order diff variabel ini (0, 1, 2, atau 3)
+  d_order <- diff_info[col, "Order_Diff"]
+  temp_pred <- raw_pred[, col]
+  
+  # A. Revert Differencing (Loop mundur)
+  if(d_order > 0) {
+    for(i in 1:d_order) {
+      target_level <- d_order - i
+      
+      # Ambil data historis sebagai jangkar (anchor)
+      if(target_level == 0) {
+        hist_series <- data_scaled[1:last_train_idx, col]
+      } else {
+        hist_series <- diff(data_scaled[1:last_train_idx, col], differences = target_level)
+      }
+      
+      anchor <- tail(hist_series, 1)
+      temp_pred <- cumsum(temp_pred) + anchor
+    }
+  }
+  
+  # B. Revert Scaling (Z-Score balik ke Real Number)
+  # Rumus: (Value * SD) + Mean
+  sd_val   <- scale_vals[col]
+  mean_val <- center_vals[col]
+  
+  nilai_asli <- (temp_pred * sd_val) + mean_val
+  
+  # Safety: Negatif ganti 0 (karena energi ga mungkin minus)
+  nilai_asli[nilai_asli < 0] <- 0
+  forecast_asli[, col] <- nilai_asli
+}
+
+# Labeling Tahun (Sesuaikan start year)
+start_year_forecast <- 2021 
+rownames(forecast_asli) <- seq(start_year_forecast, start_year_forecast + n_forecast - 1)
+
+forecast_asli
+```
+
+
+```{r}
+# ==============================================================================
+# TAHAP 6: EVALUASI PERFORMA MODEL (CLEAN & FINAL)
+# ==============================================================================
+
+# 1. PERSIAPAN DATA TEST
+# --------------------------------------------------------
+cols_model <- colnames(train_data_fix)
+
+# Ambil Data Aktual Mentah
+df_actual_raw <- df_energy_bvar
+colnames(df_actual_raw) <- gsub(" ", "_", colnames(df_actual_raw))
+colnames(df_actual_raw) <- gsub("\\.", "_", colnames(df_actual_raw))
+
+# Ambil slice terakhir sesuai n_forecast
+actual_test <- tail(df_actual_raw[, cols_model], n_forecast)
+
+
+# 2. FUNGSI HITUNG METRIK
+# --------------------------------------------------------
+calc_metrics <- function(actual, pred) {
+  e <- actual - pred
+  
+  mae <- mean(abs(e))
+  rmse <- sqrt(mean(e^2))
+  # Tambah epsilon kecil biar gak error division by zero
+  mape <- mean(abs(e / (actual + 1e-10))) * 100 
+  smape <- mean(2 * abs(e) / (abs(actual) + abs(pred) + 1e-10)) * 100
+  
+  return(c(MAE = mae, RMSE = rmse, MAPE = mape, SMAPE = smape))
+}
+
+
+# 3. LOOP HITUNG ERROR
+# --------------------------------------------------------
+raw_metrics <- data.frame(Variable=character(), MAE=numeric(), RMSE=numeric(), 
+                          MAPE=numeric(), SMAPE=numeric(), stringsAsFactors=FALSE)
+
+for(col in cols_model) {
+  act_vec  <- actual_test[[col]]
+  pred_vec <- forecast_asli[, col]
+  
+  vals <- calc_metrics(act_vec, pred_vec)
+  
+  raw_metrics <- rbind(raw_metrics, data.frame(
+    Variable = col,
+    MAE = vals["MAE"],
+    RMSE = vals["RMSE"],
+    MAPE = vals["MAPE"],
+    SMAPE = vals["SMAPE"]
+  ))
+}
+
+# 4. TAMPILKAN HASIL (SEQ2SEQ STYLE)
+# --------------------------------------------------------
+
+# A. Global Evaluation
+avg_mae   <- mean(raw_metrics$MAE)
+avg_rmse  <- mean(raw_metrics$RMSE)
+avg_mape  <- mean(raw_metrics$MAPE)
+avg_smape <- mean(raw_metrics$SMAPE)
+
+fmt <- function(x, pct=FALSE) {
+  res <- format(x, big.mark=",", scientific=FALSE, digits=2, nsmall=2)
+  if(pct) paste0(res, "%") else res
+}
+
+# Ambil tahun start dari data forecast
+thn_start <- min(as.numeric(rownames(forecast_asli)))
+thn_end   <- max(as.numeric(rownames(forecast_asli)))
+
+cat("\nGlobal Evaluation (", thn_start, "-", thn_end, "):\n", sep="")
+cat("MAE   : ", fmt(avg_mae), "\n", sep="")
+cat("RMSE  : ", fmt(avg_rmse), "\n", sep="")
+cat("MAPE  : ", fmt(avg_mape, pct=TRUE), "\n", sep="")
+cat("SMAPE : ", fmt(avg_smape, pct=TRUE), "\n", sep="")
+
+
+# B. Detailed Metrics (Tabel Bersih)
+cat("\nDETAILED METRICS PER VARIABLE (ALL):\n")
+
+display_df <- raw_metrics
+
+# Format kolom angka jadi string rapi (ada koma ribuan)
+display_df$MAE   <- sapply(display_df$MAE, fmt)
+display_df$RMSE  <- sapply(display_df$RMSE, fmt)
+display_df$MAPE  <- sapply(display_df$MAPE, function(x) fmt(x, pct=FALSE))
+display_df$SMAPE <- sapply(display_df$SMAPE, function(x) fmt(x, pct=FALSE))
+
+rownames(display_df) <- NULL 
+
+# Print tanpa row names
+print(display_df, row.names=FALSE)
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# ==============================================================================
+# TAHAP 7: VISUALISASI PERBANDINGAN (FORECAST vs ACTUAL)
+# ==============================================================================
+
+# 1. PERSIAPAN DATA VISUALISASI
+# Pastikan nama kolom di data asli sinkron dengan nama kolom model
+# (Menghindari error "column not found" karena spasi/titik)
+df_plot_source <- df_energy_bvar
+colnames(df_plot_source) <- gsub(" ", "_", colnames(df_plot_source))
+colnames(df_plot_source) <- gsub("\\.", "_", colnames(df_plot_source))
+
+# Ambil list tahun dari data asli
+all_years <- df_plot_source$Year
+forecast_years <- as.numeric(rownames(forecast_asli))
+
+cat("--- Menampilkan Plot untuk", length(cols_model), "Variabel ---\n")
+cat("(Silakan cek tab 'Plots' di RStudio dan klik panah 'Previous/Next')\n\n")
+
+# 2. LOOPING PLOT
+for(col in cols_model) {
+  
+  # A. Siapkan Data Aktual (Full History)
+  df_actual <- data.frame(
+    Year = all_years,
+    Value = df_plot_source[[col]],
+    Type = "Aktual (History)"
+  )
+  
+  # Tandai 3 tahun terakhir sebagai "Aktual (Test)" biar beda warna
+  n_rows <- nrow(df_actual)
+  idx_test <- (n_rows - n_forecast + 1):n_rows
+  df_actual$Type[idx_test] <- "Aktual (Test)"
+  
+  # B. Siapkan Data Forecast
+  df_fc <- data.frame(
+    Year = forecast_years,
+    Value = forecast_asli[, col],
+    Type = "Forecast (Model)"
+  )
+  
+  # Gabung jadi satu
+  df_combined <- rbind(df_actual, df_fc)
+  
+  # C. Bikin Plot
+  p <- ggplot(df_combined, aes(x = Year, y = Value, color = Type, linetype = Type)) +
+    
+    # Gambar Garis
+    geom_line(size = 1) +
+    geom_point(size = 2) + # Tambah titik biar jelas posisi tahunnya
+    
+    # Atur Warna & Gaya Garis
+    scale_color_manual(values = c(
+      "Aktual (History)" = "grey40",  # Abu Gelap
+      "Aktual (Test)"    = "blue",    # Biru (Kebenaran)
+      "Forecast (Model)" = "red"      # Merah (Prediksi)
+    )) +
+    scale_linetype_manual(values = c(
+      "Aktual (History)" = "solid",
+      "Aktual (Test)"    = "solid",
+      "Forecast (Model)" = "dashed"   # Putus-putus biar kelihatan beda
+    )) +
+    
+    # Judul & Label
+    labs(
+      title = paste("Forecast vs Actual:", col),
+      subtitle = paste("Evaluasi 3 Tahun Terakhir (", min(forecast_years), "-", max(forecast_years), ")"),
+      y = "Energy Consumption",
+      x = "Tahun"
+    ) +
+    
+    # Tema Bersih
+    theme_minimal() +
+    theme(
+      legend.position = "bottom",
+      plot.title = element_text(face = "bold", size = 14),
+      legend.title = element_blank()
+    )
+  
+  # Tampilkan Plot
+  print(p)
+  
+  # Jeda dikit biar gak nge-lag kalau variabelnya banyak banget (opsional)
+  Sys.sleep(0.1) 
+}
+```
+
+
+
+```{r}
+# 1. AMBIL DATA KARBON
+# Kita bikin dataframe baru yg isinya cuma Year & Emission
+# Pake [["..."]] biar aman baca karakter aneh di nama kolom aslinya
+clean_karbon <- data.frame(
+  Year = karbon$Year, 
+  Emission_CO2 = karbon[["Emission_CO₂"]] 
+)
+
+# 2. AMBIL DATA GRK
+clean_grk <- data.frame(
+  Year = grk$Year,
+  Emission_GRK = grk$Emission_GRK
+)
+
+# 3. AMBIL DATA SUHU
+clean_temp <- data.frame(
+  Year = temp$Year,
+  Temperature = temp$Temperature
+)
+
+# 4. GABUNGKAN SEMUA (MERGE)
+# Gabung Karbon & GRK dulu
+m1 <- merge(clean_karbon, clean_grk, by = "Year", all = TRUE)
+
+# Gabung hasilnya dengan Suhu -> Jadi data_iklim final
+data_iklim <- merge(m1, clean_temp, by = "Year", all = TRUE)
+
+# 5. RAPIKAN
+# Urutkan tahun dari kecil ke besar
+data_iklim <- data_iklim[order(data_iklim$Year), ]
+
+# Hapus baris yang kosong (NA)
+data_iklim <- na.omit(data_iklim)
+
+# Reset nomor baris biar rapi (1, 2, 3...)
+rownames(data_iklim) <- NULL
+
+# 6. CEK HASIL
+cat("--- Preview Data Iklim Final ---\n")
+data_iklim
+cat("\nTotal Baris:", nrow(data_iklim))
+```
+
+
+
+```{r}
+# ==============================================================================
+# OTOMATISASI GRANGER CAUSALITY TEST
+# ==============================================================================
+
+library(lmtest)
+
+# ==============================================================================
+# 1. PERSIAPAN VARIABEL & DATA
+# ==============================================================================
+
+# Definisikan dulu nama variabelnya biar gak "Object Not Found"
+# Ambil semua kolom di df_energy_bvar KECUALI "Year"
+vars_energy <- colnames(df_energy_bvar)[colnames(df_energy_bvar) != "Year"]
+
+# Ambil semua kolom di data_iklim KECUALI "Year"
+vars_iklim  <- colnames(data_iklim)[colnames(data_iklim) != "Year"]
+
+cat("Jumlah Variabel Energi :", length(vars_energy), "\n")
+cat("Jumlah Variabel Iklim  :", length(vars_iklim), "\n")
+
+# Gabungkan Data berdasarkan Year
+df_combined <- merge(df_energy_bvar, data_iklim, by = "Year")
+
+# Buang kolom Year & Lakukan Differencing (Biar Stasioner)
+data_clean <- df_combined[, names(df_combined) != "Year"]
+data_diff  <- as.data.frame(lapply(data_clean, diff))
+data_diff  <- na.omit(data_diff) # Buang baris kosong akibat diff
+
+
+# ==============================================================================
+# 2. EKSEKUSI GRANGER CAUSALITY (LOOPING)
+# ==============================================================================
+results_granger <- data.frame(
+  Hypothesis = character(),
+  F_Statistic = numeric(),
+  P_Value = numeric(),
+  Conclusion = character(),
+  stringsAsFactors = FALSE
+)
+
+lag_order <- 1 # Cek hubungan dengan jeda 1 tahun
+
+cat("\n--- Menjalankan Granger Causality (Lag =", lag_order, ") ---\n")
+
+# A. CEK APAKAH ENERGI MENYEBABKAN PERUBAHAN IKLIM?
+for(v_energy in vars_energy) {
+  for(v_iklim in vars_iklim) {
+    
+    # Skip kalau variabelnya gak ada di data_diff (Safety check)
+    if(v_energy %in% colnames(data_diff) && v_iklim %in% colnames(data_diff)) {
+      
+      # Test: Iklim ~ Energi
+      tryCatch({
+        test <- grangertest(data_diff[[v_iklim]] ~ data_diff[[v_energy]], order = lag_order)
+        p_val <- test$`Pr(>F)`[2]
+        f_stat <- test$F[2]
+        
+        if(!is.na(p_val) && p_val < 0.05) {
+          results_granger <- rbind(results_granger, data.frame(
+            Hypothesis = paste(v_energy, "-->", v_iklim),
+            F_Statistic = round(f_stat, 2),
+            P_Value = round(p_val, 4),
+            Conclusion = "SIGNIFIKAN"
+          ))
+        }
+      }, error = function(e) {}) # Skip kalau error
+    }
+  }
+}
+
+# B. CEK APAKAH IKLIM MENYEBABKAN PERUBAHAN ENERGI?
+for(v_iklim in vars_iklim) {
+  for(v_energy in vars_energy) {
+    
+    if(v_energy %in% colnames(data_diff) && v_iklim %in% colnames(data_diff)) {
+      
+      # Test: Energi ~ Iklim
+      tryCatch({
+        test <- grangertest(data_diff[[v_energy]] ~ data_diff[[v_iklim]], order = lag_order)
+        p_val <- test$`Pr(>F)`[2]
+        f_stat <- test$F[2]
+        
+        if(!is.na(p_val) && p_val < 0.05) {
+          results_granger <- rbind(results_granger, data.frame(
+            Hypothesis = paste(v_iklim, "-->", v_energy),
+            F_Statistic = round(f_stat, 2),
+            P_Value = round(p_val, 4),
+            Conclusion = "SIGNIFIKAN"
+          ))
+        }
+      }, error = function(e) {})
+    }
+  }
+}
+
+
+# ==============================================================================
+# 3. TAMPILKAN HASIL
+# ==============================================================================
+cat("\n=== HASIL HUBUNGAN SEBAB-AKIBAT (P-Value < 0.05) ===\n")
+if(nrow(results_granger) > 0) {
+  print(results_granger[order(results_granger$P_Value), ], row.names = FALSE)
+} else {
+  cat("Tidak ditemukan hubungan kausalitas yang signifikan.\n")
+}
+```
+
+
+```{r}
+library(igraph)
+
+# ==============================================================================
+# VISUALISASI JEJARING KAUSALITAS (NETWORK PLOT)
+# ==============================================================================
+
+# 1. SIAPKAN DATA
+# Kita butuh dataframe yang isinya kolom "From" dan "To"
+# Kita ambil dari tabel 'results_granger' yang sudah kamu buat tadi
+
+if(exists("results_granger") && nrow(results_granger) > 0) {
+  
+  # Pecah string "Ind_Briquette --> Emission_CO2" menjadi dua kolom
+  # Kita split berdasarkan string " --> "
+  split_res <- strsplit(results_granger$Hypothesis, " --> ")
+  
+  # Bikin dataframe baru khusus buat plotting
+  edges_df <- data.frame(
+    from = sapply(split_res, `[`, 1),
+    to   = sapply(split_res, `[`, 2),
+    weight = results_granger$F_Statistic # Ketebalan garis = Kekuatan F-Stat
+  )
+  
+  # 2. BUAT OBJEK GRAPH
+  g <- graph_from_data_frame(d = edges_df, directed = TRUE)
+  
+  # 3. ATUR TAMPILAN (STYLING)
+  # Layout: Lingkaran (circle) biar rapi, atau Fruchterman-Reingold (fr) biar organik
+  l <- layout_in_circle(g) 
+  
+  # Warna Node (Energi = Biru, Iklim = Merah/Orange biar beda)
+  # Kita cek nama node-nya mengandung kata "Emission" atau "Temperature" gak?
+  V(g)$color <- ifelse(grepl("Emission|Temperature", V(g)$name), "orange", "lightblue")
+  
+  # Ukuran Node & Label
+  V(g)$size <- 25
+  V(g)$label.cex <- 0.8       # Ukuran font
+  V(g)$label.color <- "black" # Warna font
+  V(g)$frame.color <- "white" # Pinggiran node
+  
+  # Gaya Panah (Edge)
+  E(g)$width <- E(g)$weight / 3  # Ketebalan garis disesuaikan F-Stat (dibagi 3 biar gak ketebelan)
+  E(g)$arrow.size <- 0.5         # Ukuran kepala panah
+  E(g)$color <- "gray40"         # Warna panah
+  E(g)$curved <- 0.2             # Panah melengkung dikit biar sexy
+  
+  
+  # 4. TAMPILKAN PLOT
+  cat("--- Plotting Granger Causality Network ---\n")
+  par(mar=c(1,1,1,1)) # Tipiskan margin biar gambar gede
+  plot(g, layout = l, 
+       main = "Peta Kausalitas Energi & Iklim (Significant Only)")
+  
+  # Tambah Legenda
+  legend("bottomright", legend=c("Variabel Energi", "Variabel Iklim"), 
+         col=c("lightblue", "orange"), pch=19, pt.cex=2, bty="n")
+  
+} else {
+  cat("Tidak ada hubungan signifikan, jadi tidak bisa bikin plot bro.\n")
+}
+```
+
+
+
+```{r}
+library(dplyr)
+
+# 1. AMBIL HASIL GRANGER YANG SIGNIFIKAN
+# Pastikan 'results_granger' sudah ada dari chunk sebelumnya
+if(!exists("results_granger") || nrow(results_granger) == 0) {
+  stop("Bro, run dulu Chunk Granger Causality sampai keluar tabel hasilnya!")
+}
+
+# 2. PARSE/PECAH STRING "A --> B"
+# Kita butuh tau mana "Penyebab" (From) dan mana "Akibat" (To)
+split_res <- strsplit(results_granger$Hypothesis, " --> ")
+granger_clean <- data.frame(
+  From = sapply(split_res, `[`, 1),
+  To   = sapply(split_res, `[`, 2),
+  P_Val = results_granger$P_Value
+)
+
+# 3. FILTER LOGIKA: ENERGI MENYEBABKAN IKLIM
+# Ambil list nama variabel energi
+all_energy_vars <- colnames(df_energy_bvar)[colnames(df_energy_bvar) != "Year"]
+
+# Ambil baris dimana:
+# - Kolom 'From' adalah variabel Energi
+# - P-Value < 0.05 (Signifikan)
+selected_vars <- granger_clean %>%
+  filter(From %in% all_energy_vars) %>%
+  pull(From) %>%
+  unique() # Biar gak dobel kalau dia menyebabkan CO2 dan Suhu sekaligus
+
+# 4. CEK HASIL SELEKSI
+if(length(selected_vars) == 0) {
+  stop("Waduh, ternyata tidak ada variabel Energi yang signifikan mempengaruhi Iklim berdasarkan Granger Test. Model tidak bisa dilanjutkan dengan eksogen.")
+}
+
+cat("=== VARIABEL ENERGI TERPILIH (SIGNIFIKAN) ===\n")
+cat("Variabel ini terbukti mempengaruhi Iklim dan akan masuk ke model:\n")
+print(selected_vars)
+
+
+# 5. GABUNGKAN DATA (IKLIM + ENERGI TERPILIH)
+# Kita ambil data iklim + variabel energi yang lolos seleksi saja
+df_selected_energy <- df_energy_bvar[, c("Year", selected_vars)]
+
+df_model_final <- merge(data_iklim, df_selected_energy, by = "Year")
+
+cat("\n--- DATA FINAL SIAP MODELING ---\n")
+cat("Total Kolom:", ncol(df_model_final), "\n")
+print(head(df_model_final))
+```
+
+
+
+
+```{r}
+library(tseries)
+
+# 1. STANDARISASI (SCALING)
+# Ambil data dari df_model_final (hasil seleksi Granger tadi) tanpa kolom Year
+data_raw_model <- df_model_final[, names(df_model_final) != "Year"]
+
+# Lakukan Scaling
+data_scaled_obj <- scale(data_raw_model)
+center_vals <- attr(data_scaled_obj, "scaled:center") # Simpan Mean (PENTING BUAT REVERT)
+scale_vals  <- attr(data_scaled_obj, "scaled:scale")  # Simpan SD (PENTING BUAT REVERT)
+data_scaled <- as.data.frame(data_scaled_obj)
+
+# 2. CEK STASIONERITAS AWAL (DIAGNOSA)
+# Pastikan fungsi 'cek_stasioner_awal' sudah ada di environment (dari chunk2 fungsi tadi)
+cat("--- DIAGNOSA STASIONERITAS (DATA IKLIM + EKSOGEN) ---\n")
+laporan_stasioner <- cek_stasioner_awal(data_scaled)
+
+# Tampilkan Hasil
+print(laporan_stasioner)
+```
+
+
+
+```{r}
+# === AUTO-DIFFERENCING ===
+# Pastikan fungsi 'auto_diff_check' sudah ada
+
+cat("\n--- MENJALANKAN AUTO-DIFFERENCING (MAX DIFF = 3) ---\n")
+hasil_diff <- auto_diff_check(data_scaled, max_diff = 3)
+
+# Ambil data bersih & Metadata Diff
+data_ready <- hasil_diff$data
+data_ready <- data_ready[ , !(names(data_ready) %in% "	Kom_Gasoil_CN_48")]
+diff_info  <- hasil_diff$summary
+rownames(diff_info) <- diff_info$Variable
+
+# Tampilkan Laporan Akhir: Siapa yang di-Diff berapa kali?
+cat("=== LAPORAN AKHIR: DATA SIAP MODELING ===\n")
+print(diff_info)
+```
+
+
+
+
+```{r}
+library(BVAR)
+
+# 1. TRAIN-TEST SPLIT
+n_forecast <- 3
+n_total <- nrow(data_ready)
+n_train <- n_total - n_forecast
+
+train_dat <- data_ready[1:n_train, ]
+test_dat  <- data_ready[(n_train + 1):n_total, ]
+
+cat("Data Train:", nrow(train_dat), "| Data Test:", nrow(test_dat), "\n")
+
+# 2. SETUP MODEL BVAR
+# Kita pakai prior Minnesota
+mn_params <- bv_mn(
+  lambda = bv_lambda(mode = 0.2, sd = 0.4, min = 1e-4, max = 5), 
+  alpha = bv_alpha(mode = 2)
+)
+priors <- bv_priors(mn = mn_params)
+mh_setup <- bv_mh(scale_hess = 0.05)
+
+# 3. RUN TRAINING
+cat("\n--- MELATIH MODEL BVAR... ---\n")
+run_bvar_final <- bvar(
+  data = train_dat, 
+  lags = 1, 
+  priors = priors, 
+  mh = mh_setup,
+  n_save = 1500, 
+  n_burn = 1000, 
+  verbose = TRUE
+)
+
+# 4. PREDIKSI (FORECASTING)
+cols_model <- colnames(train_dat)
+preds <- predict(run_bvar_final, horizon = n_forecast)
+raw_pred <- preds$quants[2,,] # Median
+
+# Rotasi matrix
+if(ncol(raw_pred) != length(cols_model)) { raw_pred <- t(raw_pred) }
+colnames(raw_pred) <- cols_model
+
+
+# 5. REVERTING (DIFF -> SCALE -> ASLI)
+cat("\n--- Mengembalikan Angka ke Skala Asli ---\n")
+forecast_asli <- raw_pred * 0
+last_train_idx <- nrow(data_scaled) - n_forecast # Jangkar terakhir sebelum masa forecast
+
+for(col in cols_model) {
+  d_order <- diff_info[col, "Order_Diff"]
+  temp_pred <- raw_pred[, col]
+  
+  # A. Revert Diff
+  if(d_order > 0) {
+    for(i in 1:d_order) {
+      target_level <- d_order - i
+      if(target_level == 0) {
+        hist_series <- data_scaled[1:last_train_idx, col]
+      } else {
+        hist_series <- diff(data_scaled[1:last_train_idx, col], differences = target_level)
+      }
+      anchor <- tail(hist_series, 1)
+      temp_pred <- cumsum(temp_pred) + anchor
+    }
+  }
+  
+  # B. Revert Scale
+  val_asli <- (temp_pred * scale_vals[col]) + center_vals[col]
+  
+  # Safety: Non-negative check
+  if(grepl("Emission|Ind_", col)) val_asli[val_asli < 0] <- 0 
+  
+  forecast_asli[, col] <- val_asli
+}
+
+# 6. TAMPILKAN HASIL KHUSUS IKLIM
+vars_target <- colnames(data_iklim)[colnames(data_iklim) != "Year"]
+final_output <- forecast_asli[, vars_target]
+
+start_year <- 2021
+rownames(final_output) <- seq(start_year, start_year + n_forecast - 1)
+
+cat("\n=== HASIL FORECAST FINAL (IKLIM) ===\n")
+print(final_output)
+```
+
+
+```{r}
+# ==============================================================================
+# TAHAP EVALUASI: SEBERAPA AKURAT MODEL IKLIM KITA?
+# ==============================================================================
+
+# 1. PERSIAPAN DATA AKTUAL
+# Ambil data asli dari df_model_final (Data Iklim + Eksogen yg sudah digabung)
+# Kita ambil n_forecast baris terakhir sebagai kunci jawaban
+vars_target <- colnames(data_iklim)[colnames(data_iklim) != "Year"]
+actual_test <- tail(df_model_final[, vars_target], n_forecast)
+
+# 2. FUNGSI HITUNG ERROR (LENGKAP)
+calc_metrics <- function(actual, pred) {
+  e <- actual - pred
+  
+  # MAE: Rata-rata kesalahan absolut
+  mae <- mean(abs(e))
+  
+  # RMSE: Akar kuadrat rata-rata kesalahan (lebih sensitif sama error gede)
+  rmse <- sqrt(mean(e^2))
+  
+  # MAPE: Persentase error (Hati-hati kalau ada nilai 0)
+  mape <- mean(abs(e / (actual + 1e-10))) * 100 
+  
+  # SMAPE: Symmetric MAPE (Lebih stabil & adil)
+  smape <- mean(2 * abs(e) / (abs(actual) + abs(pred) + 1e-10)) * 100
+  
+  return(c(MAE = mae, RMSE = rmse, MAPE = mape, SMAPE = smape))
+}
+
+# 3. LOOP HITUNG ERROR PER VARIABEL
+raw_metrics <- data.frame(
+  Variable = character(), 
+  MAE = numeric(), 
+  RMSE = numeric(), 
+  MAPE = numeric(), 
+  SMAPE = numeric(), 
+  stringsAsFactors = FALSE
+)
+
+for(col in vars_target) {
+  # Ambil vektor aktual & prediksi
+  act_vec  <- actual_test[[col]]
+  pred_vec <- final_output[, col]
+  
+  # Hitung
+  vals <- calc_metrics(act_vec, pred_vec)
+  
+  # Masukin tabel
+  raw_metrics <- rbind(raw_metrics, data.frame(
+    Variable = col,
+    MAE = vals["MAE"],
+    RMSE = vals["RMSE"],
+    MAPE = vals["MAPE"],
+    SMAPE = vals["SMAPE"]
+  ))
+}
+
+# 4. TAMPILKAN TABEL ERROR YANG BERSIH
+fmt <- function(x, pct=FALSE) {
+  res <- format(x, big.mark=",", scientific=FALSE, digits=2, nsmall=2)
+  if(pct) paste0(res, "%") else res
+}
+
+display_df <- raw_metrics
+display_df$MAE   <- sapply(display_df$MAE, fmt)
+display_df$RMSE  <- sapply(display_df$RMSE, fmt)
+display_df$MAPE  <- sapply(display_df$MAPE, function(x) fmt(x, pct=FALSE)) # Tanpa persen di kolom
+display_df$SMAPE <- sapply(display_df$SMAPE, function(x) fmt(x, pct=FALSE))
+
+rownames(display_df) <- NULL # Hapus row number biar rapi
+
+cat("\n========================================================\n")
+cat("   EVALUASI AKURASI MODEL IKLIM (DENGAN EKSOGEN ENERGI)   \n")
+cat("========================================================\n")
+print(display_df, row.names = FALSE)
+
+# Rata-rata Global
+cat("\n--- Rata-rata Performa Model ---\n")
+cat("Mean MAPE  :", fmt(mean(raw_metrics$MAPE), pct=TRUE), "\n")
+cat("Mean SMAPE :", fmt(mean(raw_metrics$SMAPE), pct=TRUE), "(Indikator Utama)\n")
+
+
+# ==============================================================================
+# TAHAP VISUALISASI: PLOT ACTUAL VS FORECAST
+# ==============================================================================
+library(ggplot2)
+
+cat("\n--- Menampilkan Grafik Perbandingan ---\n")
+fc_years <- as.numeric(rownames(final_output))
+all_years <- df_model_final$Year
+
+for(col in vars_target) {
+  
+  # Data Aktual (Gabung History + Test)
+  df_act <- data.frame(Year = all_years, Value = df_model_final[[col]], Type = "Aktual (History)")
+  # Warnai bagian test beda
+  df_act$Type[ (nrow(df_act)-n_forecast+1):nrow(df_act) ] <- "Aktual (Test)"
+  
+  # Data Forecast
+  df_fc <- data.frame(Year = fc_years, Value = final_output[, col], Type = "Forecast (Model)")
+  
+  df_plot <- rbind(df_act, df_fc)
+  
+  # Plotting
+  p <- ggplot(df_plot, aes(x=Year, y=Value, color=Type, linetype=Type)) +
+    geom_line(size=1) + geom_point(size=2) +
+    scale_color_manual(values=c("Aktual (History)"="grey40", "Aktual (Test)"="blue", "Forecast (Model)"="red")) +
+    scale_linetype_manual(values=c("solid", "solid", "dashed")) +
+    labs(
+      title = paste("Forecast vs Actual:", col),
+      subtitle = paste("SMAPE Error:", fmt(raw_metrics[raw_metrics$Variable==col, "SMAPE"], pct=TRUE)),
+      y = "Nilai", x = "Tahun"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "bottom", legend.title = element_blank())
+  
+  print(p)
+  Sys.sleep(0.5)
+}
+```
+
+
+
+```{r}
+# ==============================================================================
+# TAHAP FINAL: FORECAST MASA DEPAN (EX-ANTE FORECAST)
+# ==============================================================================
+
+library(BVAR)
+library(ggplot2)
+
+# 1. LATIH MODEL DENGAN FULL DATA (DATA_READY)
+# Kita tidak pakai 'train_dat' lagi, tapi pakai 'data_ready' 
+# (karena 'data_ready' adalah hasil diff dari SELURUH data sejarah lu)
+
+cat("\n--- Melatih Model Final dengan 100% Data Historis ---\n")
+
+# Setup Prior (Sama)
+mn_params <- bv_mn(lambda = bv_lambda(mode = 0.2, sd = 0.4, min = 1e-4, max = 5), alpha = bv_alpha(mode = 2))
+priors <- bv_priors(mn = mn_params)
+mh_setup <- bv_mh(scale_hess = 0.05)
+
+# Run BVAR pada DATA_READY (Full)
+run_bvar_future <- bvar(
+  data = data_ready,   # <--- PAKE INI (FULL)
+  lags = 1, 
+  priors = priors, 
+  mh = mh_setup,
+  n_save = 1500, 
+  n_burn = 1000, 
+  verbose = TRUE
+)
+
+
+# 2. PREDIKSI 3 TAHUN KE DEPAN
+n_future <- 3 
+cat("\n--- Memprediksi", n_future, "Tahun ke Depan... ---\n")
+
+cols_model <- colnames(data_ready)
+preds <- predict(run_bvar_future, horizon = n_future)
+raw_pred <- preds$quants[2,,]
+
+if(ncol(raw_pred) != length(cols_model)) { raw_pred <- t(raw_pred) }
+colnames(raw_pred) <- cols_model
+
+
+# 3. REVERTING KE SKALA ASLI
+# Kita pakai 'data_scaled' yang sudah ada (karena itu juga Full Data)
+future_forecast_asli <- raw_pred * 0
+last_idx_full <- nrow(data_scaled) # Titik terakhir data sejarah
+
+for(col in cols_model) {
+  d_order <- diff_info[col, "Order_Diff"]
+  temp_pred <- raw_pred[, col]
+  
+  # A. Revert Diff
+  if(d_order > 0) {
+    for(i in 1:d_order) {
+      target_level <- d_order - i
+      if(target_level == 0) {
+        hist_series <- data_scaled[, col] 
+      } else {
+        hist_series <- diff(data_scaled[, col], differences = target_level)
+      }
+      anchor <- tail(hist_series, 1) # Ambil titik terakhir banget (2023)
+      temp_pred <- cumsum(temp_pred) + anchor
+    }
+  }
+  
+  # B. Revert Scale
+  val_asli <- (temp_pred * scale_vals[col]) + center_vals[col]
+  
+  # Safety Check
+  if(grepl("Emission|Ind_", col)) val_asli[val_asli < 0] <- 0 
+  
+  future_forecast_asli[, col] <- val_asli
+}
+
+
+# 4. OUTPUT & PLOT MASA DEPAN (KHUSUS IKLIM)
+vars_target <- colnames(data_iklim)[colnames(data_iklim) != "Year"]
+final_future_vals <- future_forecast_asli[, vars_target]
+
+# Label Tahun Masa Depan
+last_year_history <- max(df_model_final$Year)
+future_years <- seq(last_year_history + 1, last_year_history + n_future)
+rownames(final_future_vals) <- future_years
+
+cat("\n======================================================\n")
+cat("   RAMALAN IKLIM TAHUN", min(future_years), "-", max(future_years), "\n")
+cat("======================================================\n")
+print(final_future_vals)
+
+
+# 5. VISUALISASI SAMBUNGAN
+cat("\n--- Membuat Grafik Proyeksi Masa Depan ---\n")
+
+for(col in vars_target) {
+  
+  # Data Sejarah
+  df_hist <- data.frame(
+    Year = df_model_final$Year,
+    Value = df_model_final[[col]],
+    Type = "Data Historis"
+  )
+  
+  # Data Masa Depan
+  df_fut <- data.frame(
+    Year = future_years,
+    Value = final_future_vals[, col],
+    Type = "Proyeksi (Forecast)"
+  )
+  
+  # Sambung Data (Biar garisnya nyambung)
+  last_hist <- tail(df_hist, 1)
+  last_hist$Type <- "Proyeksi (Forecast)"
+  df_fut <- rbind(last_hist, df_fut)
+  
+  df_plot_final <- rbind(df_hist, df_fut)
+  
+  p <- ggplot(df_plot_final, aes(x=Year, y=Value, color=Type, linetype=Type)) +
+    geom_line(size=1.2) + 
+    # Titik hanya di masa depan
+    geom_point(data=df_fut[-1,], size=2) +
+    
+    scale_color_manual(values=c("Data Historis"="black", "Proyeksi (Forecast)"="red")) +
+    scale_linetype_manual(values=c("solid", "longdash")) +
+    
+    # Shading Area Masa Depan
+    annotate("rect", xmin=min(future_years)-0.5, xmax=max(future_years)+0.5, 
+             ymin=-Inf, ymax=Inf, alpha=0.1, fill="red") +
+    
+    labs(
+      title = paste("Proyeksi Masa Depan:", col),
+      subtitle = paste("Estimasi Model BVAR Tahun", min(future_years), "-", max(future_years)),
+      y = "Nilai", x = "Tahun"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "bottom", legend.title = element_blank())
+  
+  print(p)
+  Sys.sleep(0.5)
+}
+```
+
+```{r}
+# ==============================================================================
+# A. MEMBUAT TABEL GABUNGAN (HISTORIS + FORECAST)
+# ==============================================================================
+
+# 1. Siapkan Data Historis (Cuma ambil kolom Tahun & Variabel Iklim)
+# Kita ambil dari df_model_final yang asli
+vars_target <- colnames(data_iklim)[colnames(data_iklim) != "Year"]
+df_history_clean <- df_model_final[, c("Year", vars_target)]
+
+# 2. Siapkan Data Forecast
+# Ubah matrix forecast jadi dataframe dan tambah kolom Year
+df_forecast_clean <- as.data.frame(final_future_vals)
+df_forecast_clean$Year <- as.numeric(rownames(final_future_vals))
+
+# Pastikan urutan kolom sama biar bisa digabung
+df_forecast_clean <- df_forecast_clean[, names(df_history_clean)]
+
+# 3. GABUNGKAN (RBIND)
+df_total_complete <- rbind(df_history_clean, df_forecast_clean)
+
+cat("=== TABEL DATA LENGKAP (HISTORIS + FORECAST) ===\n")
+cat("Rentang Tahun:", min(df_total_complete$Year), "sampai", max(df_total_complete$Year), "\n")
+cat("Baris Terakhir (Cek Forecast):\n")
+df_total_complete
+
+# (Opsional) Kalau mau simpan ke Excel/CSV buat lampiran:
+# write.csv(df_total_complete, "Hasil_Forecast_Lengkap.csv", row.names = FALSE)
+
+
+# ==============================================================================
+# VISUALISASI FINAL: DENGAN TITIK & LABEL ANGKA
+# ==============================================================================
+cat("\n--- Menampilkan Grafik Proyeksi Masa Depan (With Labels) ---\n")
+
+for(col in vars_target) {
+  
+  # 1. SIAPKAN DATA
+  df_plot <- df_total_complete[, c("Year", col)]
+  colnames(df_plot) <- c("Year", "Value")
+  
+  # Definisikan Tipe Data
+  last_hist_year <- max(df_model_final$Year)
+  df_plot$Type <- ifelse(df_plot$Year <= last_hist_year, "Data Historis", "Proyeksi (Forecast)")
+  
+  # Trik Sambungan Garis (Ambil titik terakhir history jadi forecast juga)
+  connector <- df_plot[df_plot$Year == last_hist_year, ]
+  connector$Type <- "Proyeksi (Forecast)"
+  
+  df_plot_final <- rbind(df_plot, connector)
+  df_plot_final <- df_plot_final[order(df_plot_final$Year), ]
+  
+  # 2. SIAPKAN DATA LABEL (Khusus Forecast + Last History)
+  # Kita cuma mau nampilin angka di tahun 2023, 2024, 2025, dst.
+  df_labels <- subset(df_plot_final, Type == "Proyeksi (Forecast)")
+  
+  
+  # --- GAMBAR PLOT ---
+  p <- ggplot(df_plot_final, aes(x=Year, y=Value, color=Type, linetype=Type)) +
+    
+    # A. Garis & Area
+    geom_line(size=1.2) + 
+    annotate("rect", xmin = last_hist_year, xmax = max(df_plot_final$Year) + 0.5, 
+             ymin = -Inf, ymax = Inf, alpha = 0.05, fill = "red") +
+    
+    # B. Titik (Dots) - Biar jelas posisinya
+    # Kita kasih titik di semua forecast, dan titik kecil di history
+    geom_point(data=subset(df_plot_final, Type=="Proyeksi (Forecast)"), size=3) +
+    geom_point(data=subset(df_plot_final, Type=="Data Historis"), size=1, alpha=0.5) +
+    
+    # C. Label Angka (Text) - HANYA DI FORECAST
+    geom_text(
+      data = df_labels,
+      aes(label = scales::comma(Value, accuracy = 1)), # Format angka ada komanya
+      vjust = -0.8, # Geser ke atas titik dikit
+      size = 3.5,   # Ukuran font
+      show.legend = FALSE,
+      fontface = "bold"
+    ) +
+    
+    # D. Styling Sumbu & Warna
+    scale_color_manual(values=c("Data Historis"="black", "Proyeksi (Forecast)"="red")) +
+    scale_linetype_manual(values=c("solid", "longdash")) +
+    
+    # Format Sumbu Y jadi angka biasa (bukan 8e+08)
+    scale_y_continuous(labels = scales::comma, 
+                       expand = expansion(mult = c(0.1, 0.2))) + # Tambah ruang di atas biar label gak kepotong
+    
+    # Format Sumbu X biar munculin semua tahun forecast
+    scale_x_continuous(breaks = seq(min(df_plot_final$Year), max(df_plot_final$Year), by = 2)) +
+    
+    # E. Label & Judul
+    labs(
+      title = paste("Proyeksi:", col),
+      subtitle = paste("Estimasi Nilai Tahun", min(df_forecast_clean$Year), "-", max(df_forecast_clean$Year)),
+      y = "Nilai", x = ""
+    ) +
+    
+    theme_minimal() +
+    theme(
+      legend.position = "bottom", 
+      legend.title = element_blank(),
+      plot.title = element_text(face="bold", size=14),
+      axis.text = element_text(size=10),
+      panel.grid.minor = element_blank() # Ilangin garis grid kecil biar bersih
+    )
+  
+  print(p)
+  Sys.sleep(0.5)
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+

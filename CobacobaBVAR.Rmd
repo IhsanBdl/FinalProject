@@ -1,0 +1,694 @@
+---
+title: "CobacobaBVAR"
+author: "Maulana Ihsan Athallah"
+date: "2026-04-09"
+output: pdf_document
+---
+
+# **BISMILLAH FINAL PROJECT**
+### **Step 3 : PEMODELAN TIPE 1**
+
+
+### 1. Panggil Library yang akan digunakan
+```{r}
+# === Paket Dasar ===
+library(tidyverse)       # gabungan dplyr, ggplot2, readr, tidyr
+library(data.table)      # manipulasi data cepat (opsional)
+library(scales)          # format angka dan sumbu
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+# === Visualisasi ===
+library(ggplot2)
+library(ggthemes)
+library(viridis)
+
+# === Standarisasi & Machine Learning ===
+library(caret)           # preprocessing (scale, center), evaluasi model
+library(recipes)         # pipeline preprocessing alternatif
+library(tseries)
+library(MASS)
+library(bestNormalize)
+
+# === Deep Learning ===
+library(keras)           # untuk LSTM, optimizer (Adam, Nadam, RMSprop)
+library(tensorflow)      # backend keras
+
+# === Evaluasi ===
+library(Metrics)         # MAE, RMSE, MSE
+
+# === Utilitas ===
+library(glue)            # string interpolation seperti f-string Python
+library(reticulate)      # kalau mau jalankan Python langsung
+library(microbenchmark)  # alternatif timeit
+```
+
+
+### Data Energi Sektor Industri
+
+```{r}
+industri <- read_csv("industri2.csv")
+industri
+```
+
+```{r}
+str(industri)
+```
+
+
+### Data Energi Sektor Rumah Tangga
+
+```{r}
+rumahtangga <- read_csv("rumahtangga2.csv")
+rumahtangga
+```
+
+### Data Energi Sektor Komersial
+
+```{r}
+komersial <- read_csv("komersial2.csv")
+komersial
+```
+
+### Data Perubahan Iklim Emisi CO2
+
+```{r}
+karbon <- read_csv("karbon.csv")
+karbon
+```
+
+
+### Data Perubahan Iklim Emisi Gas Rumah Kaca
+
+```{r}
+grk <- read_csv("grk.csv")
+grk
+```
+
+### Data Perubahan Iklim Perubahan Suhu Permukaan
+
+```{r}
+temp <- read_csv("temp.csv")
+temp
+```
+
+#PENGGABUNGAN DATASET
+```{r}
+df_ind_bvar <- industri
+df_rt_bvar <- rumahtangga
+df_kom_bvar <- komersial
+
+# 1. Menambahkan identitas (Prefix) per kolom
+colnames(df_ind_bvar) <- paste0("Ind_", colnames(industri))
+colnames(df_rt_bvar) <- paste0("RT_", colnames(rumahtangga))
+colnames(df_kom_bvar) <- paste0("Kom_", colnames(komersial))
+
+# 2. Gabungkan Data
+df_energy_bvar <- cbind(df_ind_bvar, df_rt_bvar, df_kom_bvar)
+
+# === TAMBAHAN: MEMBERSIHKAN NAMA KOLOM ===
+
+# a. Ganti Spasi " " menjadi "_"
+colnames(df_energy_bvar) <- gsub(" ", "_", colnames(df_energy_bvar))
+
+# b. Ganti Titik "." menjadi "_" 
+# Note: Kita pakai "\\." karena tanda titik dianggap karakter spesial di R
+colnames(df_energy_bvar) <- gsub("\\.", "_", colnames(df_energy_bvar))
+
+# c. (Opsional) Hapus jika ada underscore ganda "__" akibat proses di atas
+colnames(df_energy_bvar) <- gsub("__", "_", colnames(df_energy_bvar))
+
+# Tampilkan hasil
+df_energy_bvar
+```
+
+
+#Cleaning Dataset
+```{r}
+# Nama kolom "Ind_Year" dan ganti dengan "Year"
+colnames(df_energy_bvar)[colnames(df_energy_bvar) == "Ind_Year"] <- "Year"
+
+# 2. Drop Kolom yang tidak dipakai
+cols_to_drop <- c("RT_Year", "Kom_Year", "Ind_Sector", "RT_Sector", "Kom_Sector")
+
+# Pilih semua kolom KECUALI (!) yang ada di daftar cols_to_drop
+df_energy_bvar <- df_energy_bvar[, !colnames(df_energy_bvar) %in% cols_to_drop]
+
+# 4. Buang baris NA
+df_energy_bvar <- na.omit(df_energy_bvar)
+
+# Ambil semua baris dimana Year TIDAK SAMA DENGAN (!=) 2024
+df_energy_bvar <- df_energy_bvar[df_energy_bvar$Year != 2024, ]
+
+# 5. Tampilkan data
+df_energy_bvar
+```
+
+
+#Standarisasi Dataset
+```{r}
+# 1. Standarisasi Data (Z-Score)
+data_raw <- df_energy_bvar[, names(df_energy_bvar) != "Year"]
+data_scaled_obj <- scale(data_raw) 
+
+# parameter scaling
+center_vals <- attr(data_scaled_obj, "scaled:center") # Mean
+scale_vals  <- attr(data_scaled_obj, "scaled:scale")  # SD
+
+data_scaled <- as.data.frame(data_scaled_obj)
+
+cat("Preview Data Scaled:\n")
+data_scaled
+```
+
+
+#Cek Stasioneritas data : 
+```{r}
+library(tseries)
+
+# === FUNGSI CEK STASIONERITAS ===
+cek_stasioner_awal <- function(df) {
+  col_names <- names(df)
+  results <- data.frame(
+    Variable = character(),
+    P_Value = numeric(),
+    Status = character(),
+    stringsAsFactors = FALSE
+  )
+  
+  cat("--- Memeriksa Stasioneritas", length(col_names), "Variabel ---\n")
+  
+  for(col in col_names) {
+    vec_data <- na.omit(df[[col]])
+    if(var(vec_data) == 0 || length(vec_data) < 3) {
+      p_val <- NA
+      stat <- "SKIP (Konstan/Data Kurang)"
+    } else {
+      # 2. ADF Test
+      tryCatch({
+        test <- adf.test(vec_data)
+        p_val <- round(test$p.value, 4)
+        stat <- ifelse(test$p.value < 0.05, "Stasioner (Aman)", "Tidak Stasioner")
+      }, error = function(e) {
+        p_val <- NA
+        stat <- "Error ADF"
+      })
+    }
+    results <- rbind(results, data.frame(
+      Variable = col, 
+      P_Value = p_val, 
+      Status = stat
+    ))
+  }
+  
+  return(results)
+}
+
+# Cek Stasioner
+laporan_awal <- cek_stasioner_awal(data_scaled)
+laporan_awal
+```
+
+
+
+```{r}
+library(tseries)
+
+# === FUNGSI CEK STASIONER & AUTO DIFF ===
+auto_diff_check <- function(df, max_diff = 2) {
+  col_names <- names(df)
+  n_rows_original <- nrow(df)
+  processed_list <- list()
+  
+  report_df <- data.frame(
+    Variable = character(), Order_Diff = integer(), 
+    Final_P_Value = numeric(), Status = character(), stringsAsFactors = FALSE
+  )
+  
+  for(col in col_names) {
+    current_vec <- df[[col]]
+    current_d <- 0
+    is_stationary <- FALSE
+    final_p <- NA
+    status_msg <- "Max Diff Reached"
+    
+    while(current_d <= max_diff) {
+      clean_vec <- na.omit(current_vec)
+
+      if(var(clean_vec) == 0 || length(clean_vec) < 3) {
+        status_msg <- "SKIP (Konstan/Pendek)"; final_p <- NA; break
+      }
+      
+      # Uji ADF
+      tryCatch({
+        test <- adf.test(clean_vec)
+        p_val <- test$p.value
+        
+        if(p_val < 0.05) { 
+          is_stationary <- TRUE
+          final_p <- p_val
+          status_msg <- "Stasioner"
+          break
+        } else {
+          final_p <- p_val
+        }
+      }, error = function(e) { status_msg <- "Error ADF" })
+      
+      if(!is_stationary && current_d < max_diff) {
+        current_d <- current_d + 1
+        current_vec <- diff(current_vec)
+      } else {
+        break
+      }
+    }
+    
+    pad_na <- rep(NA, n_rows_original - length(current_vec))
+    processed_list[[col]] <- c(pad_na, current_vec)
+    
+    report_df <- rbind(report_df, data.frame(
+      Variable = col, Order_Diff = current_d, 
+      Final_P_Value = round(final_p, 4), Status = status_msg
+    ))
+  }
+  
+  df_final_clean <- na.omit(as.data.frame(processed_list))
+  return(list(data = df_final_clean, summary = report_df))
+}
+
+# === EKSEKUSI ===
+hasil_auto_diff <- auto_diff_check(data_scaled, max_diff = 2)
+data_ready <- hasil_auto_diff$data
+
+cat("=== Summary Auto-Diff ===\n")
+print(hasil_auto_diff$summary)
+```
+
+
+```{r}
+# ... (setelah baris data_ready <- hasil_auto_diff$data)
+
+# === VISUALISASI ACF & PACF (Post-Differencing) ===
+
+plot_acf_pacf <- function(df) {
+  col_names <- names(df)
+  
+  for (col in col_names) {
+    # Setup grid 1 baris 2 kolom
+    par(mfrow = c(1, 2)) 
+    
+    # Ambil data
+    vec_data <- df[[col]]
+    
+    # Plot ACF
+    acf(vec_data, main = paste("ACF -", col), 
+        col = "blue", lwd = 2, lag.max = 20)
+    
+    # Plot PACF
+    pacf(vec_data, main = paste("PACF -", col), 
+         col = "red", lwd = 2, lag.max = 20)
+    
+    # Reset layout (opsional, agar plot selanjutnya bersih)
+    par(mfrow = c(1, 1))
+  }
+}
+
+cat("=== Menampilkan Plot ACF & PACF Data Stasioner ===\n")
+plot_acf_pacf(data_ready)
+```
+
+
+```{r}
+library(BVAR)
+library(ggplot2)
+library(scales)
+
+# ==============================================================================
+# 1. FUNGSI REVERT (DIPERBAIKI UNTUK PENYAMBUNGAN SEMPURNA)
+# ==============================================================================
+revert_data_final <- function(raw_matrix, cols_target, is_future = FALSE) {
+  if(ncol(raw_matrix) != length(cols_target)) { raw_matrix <- t(raw_matrix) }
+  colnames(raw_matrix) <- cols_target
+  res_matrix <- raw_matrix * 0 
+  
+  diff_info <- hasil_auto_diff$summary
+  nama_bersih <- gsub("[ .]", "_", diff_info$Variable)
+  rownames(diff_info) <- nama_bersih
+  
+  # Penentuan index anchor
+  last_idx <- if(is_future) nrow(data_scaled) else (nrow(data_scaled) - n_forecast)
+  
+  for(col in cols_target) {
+    col_clean <- gsub("[ .]", "_", col)
+    d_order <- diff_info[col_clean, "Order_Diff"]
+    if(is.na(d_order)) d_order <- 0
+    
+    temp_vec <- raw_matrix[, col]
+    
+    # Revert Differencing
+    if(d_order > 0) {
+      for(i in 1:d_order) {
+        target_level <- d_order - i
+        hist_series <- if(target_level == 0) data_scaled[1:last_idx, col] else 
+                       diff(data_scaled[1:last_idx, col], differences = target_level)
+        anchor <- tail(hist_series, 1)
+        temp_vec <- cumsum(temp_vec) + anchor
+      }
+    }
+    
+    # Revert Scaling
+    sd_val <- scale_vals[col]; mean_val <- center_vals[col]
+    if(is.na(sd_val)) sd_val <- 1; if(is.na(mean_val)) mean_val <- 0
+    
+    nilai_asli <- (temp_vec * sd_val) + mean_val
+    res_matrix[, col] <- pmax(nilai_asli, 0)
+  }
+  return(res_matrix)
+}
+```
+
+
+
+
+========================================================================================================================================================================
+
+
+```{r}
+# ==============================================================================
+# A1. SPLIT DATA
+# ==============================================================================
+n_total <- nrow(data_ready)
+n_train <- floor(0.8 * n_total)
+n_forecast <- n_total - n_train
+
+train_data <- data_ready[1:n_train, ]
+test_data  <- data_ready[(n_train + 1):n_total, ]
+cols_model <- colnames(train_data)
+```
+
+
+```{r}
+# ==============================================================================
+# A2. TRAIN MODEL
+# ==============================================================================
+library(BVAR)
+
+mn_params <- bv_mn(
+  lambda = bv_lambda(mode = 0.2, sd = 0.4, min = 1e-4, max = 5),
+  alpha = bv_alpha(mode = 2)
+)
+
+priors <- bv_priors(mn = mn_params)
+mh_setup <- bv_mh(scale_hess = 0.05)
+
+run_eval <- bvar(
+  data = train_data,
+  lags = 2,
+  priors = priors,
+  mh = mh_setup,
+  n_save = 5000,
+  n_burn = 2000,
+  verbose = FALSE
+)
+```
+
+
+```{r}
+# ==============================================================================
+# A3. PREDICT TEST
+# ==============================================================================
+preds_test <- predict(run_eval, horizon = n_forecast)
+
+forecast_test <- revert_data_final(
+  preds_test$quants[2,,],
+  cols_model,
+  is_future = FALSE
+)
+```
+
+
+```{r}
+# ==============================================================================
+# A4. EVALUASI METRIK
+# ==============================================================================
+df_actual_raw <- df_energy_bvar
+colnames(df_actual_raw) <- gsub("[ .]", "_", colnames(df_actual_raw))
+
+actual_test <- tail(df_actual_raw[, cols_model], n_forecast)
+
+calc_metrics <- function(actual, pred) {
+  e <- as.numeric(actual) - as.numeric(pred)
+  c(
+    MAE = mean(abs(e)),
+    RMSE = sqrt(mean(e^2)),
+    MAPE = mean(abs(e / (actual + 1e-10))) * 100
+  )
+}
+
+results_df <- data.frame()
+
+for(col in cols_model) {
+  vals <- calc_metrics(actual_test[[col]], forecast_test[, col])
+  
+  results_df <- rbind(results_df, data.frame(
+    Variable = col,
+    MAE = unname(vals["MAE"]),
+    RMSE = unname(vals["RMSE"]),
+    MAPE = unname(vals["MAPE"])
+  ))
+}
+
+# GLOBAL MAPE
+fmt <- function(x) format(x, big.mark=",", digits=2, nsmall=2)
+
+cat("\nGLOBAL MAE:", fmt(mean(results_df$MAE)))
+
+display_df <- results_df
+display_df$MAE  <- sapply(display_df$MAE, fmt)
+display_df$RMSE <- sapply(display_df$RMSE, fmt)
+display_df$MAPE <- paste0(sapply(display_df$MAPE, fmt), "%")
+rownames(display_df) <- NULL
+
+print(display_df, row.names = FALSE)
+```
+
+
+```{r}
+# ==============================================================================
+# A4. EVALUASI METRIK
+# ==============================================================================
+df_actual_raw <- df_energy_bvar
+colnames(df_actual_raw) <- gsub("[ .]", "_", colnames(df_actual_raw))
+
+actual_test <- tail(df_actual_raw[, cols_model], n_forecast)
+
+calc_metrics <- function(actual, pred) {
+  e <- as.numeric(actual) - as.numeric(pred)
+  c(
+    MAE = mean(abs(e)),
+    RMSE = sqrt(mean(e^2)),
+    MAPE = mean(abs(e / (actual + 1e-10))) * 100
+  )
+}
+
+results_df <- data.frame()
+
+for(col in cols_model) {
+  vals <- calc_metrics(actual_test[[col]], forecast_test[, col])
+  
+  results_df <- rbind(results_df, data.frame(
+    Variable = col,
+    MAE = unname(vals["MAE"]),
+    RMSE = unname(vals["RMSE"]),
+    MAPE = unname(vals["MAPE"])
+  ))
+}
+
+# GLOBAL MAPE
+fmt <- function(x) format(x, big.mark=",", digits=2, nsmall=2)
+
+cat("\nGLOBAL MAPE:", fmt(mean(results_df$MAPE)), "%\n")
+
+display_df <- results_df
+display_df$MAE  <- sapply(display_df$MAE, fmt)
+display_df$RMSE <- sapply(display_df$RMSE, fmt)
+display_df$MAPE <- paste0(sapply(display_df$MAPE, fmt), "%")
+rownames(display_df) <- NULL
+
+print(display_df, row.names = FALSE)
+```
+
+
+```{r}
+# ==============================================================================
+# A5. PLOT TEST FORECAST (WAJIB)
+# ==============================================================================
+library(ggplot2)
+library(scales)
+
+START_YEAR <- 1990
+years_hist <- seq(START_YEAR, length.out = nrow(df_actual_raw))
+years_test <- tail(years_hist, n_forecast)
+
+for(col in cols_model) {
+  
+  df_plot <- data.frame(
+    Year = years_hist,
+    Value = df_actual_raw[[col]],
+    Type = "Actual (Train)"
+  )
+  
+  idx_test <- length(years_hist) - n_forecast + 1
+  df_plot$Type[idx_test:length(years_hist)] <- "Actual (Test)"
+  
+  err <- results_df$RMSE[results_df$Variable == col]
+  
+  df_test_f <- data.frame(
+    Year = years_test,
+    Value = forecast_test[, col],
+    Lower = pmax(forecast_test[, col] - 1.96 * err, 0),
+    Upper = forecast_test[, col] + 1.96 * err
+  )
+  
+  p <- ggplot() +
+  
+  # Actual (semua hitam)
+  geom_line(data = df_plot,
+            aes(x = Year, y = Value),
+            color = "black", size = 1) +
+  
+  # CI
+  geom_ribbon(data = df_test_f,
+              aes(x = Year, ymin = Lower, ymax = Upper),
+              fill = "red", alpha = 0.15) +
+  
+  # Forecast
+  geom_line(data = df_test_f,
+            aes(x = Year, y = Value),
+            color = "red", linetype = "dashed", size = 1) +
+  
+  scale_y_continuous(labels = comma) +
+  theme_minimal() +
+  labs(title = paste("Test Forecast:", col))
+  
+  print(p)  # 🔥 INI WAJIB
+}
+```
+
+
+```{r}
+# ==============================================================================
+# A6. EXPORT (TEST ONLY ✅)
+# ==============================================================================
+
+df_export_forecast <- as.data.frame(forecast_test)
+
+# Tambahkan Year
+df_export_forecast$Year <- years_test
+
+# Pindahkan Year ke depan
+cols <- names(df_export_forecast)
+df_export_forecast <- df_export_forecast[, c("Year", setdiff(cols, "Year"))]
+
+# ===============================
+# METRICS (RAW NUMERIC)
+# ===============================
+df_export_metrics <- results_df
+
+# ===============================
+# SIMPAN FILE 
+# ===============================
+write.csv(df_export_forecast, "bvar_forecast_result.csv", row.names = FALSE)
+write.csv(df_export_metrics, "bvar_metrics_result.csv", row.names = FALSE)
+
+cat("\n=== EXPORT SESUAI PIPELINE LAMA ===\n")
+cat("Lokasi:", getwd(), "\n")
+```
+
+
+```{r}
+# ==============================================================================
+# B1. TRAIN FULL DATA
+# ==============================================================================
+run_final <- bvar(
+  data = data_ready,
+  lags = 2,
+  priors = priors,
+  mh = mh_setup,
+  n_save = 5000,
+  n_burn = 2000,
+  verbose = FALSE
+)
+
+n_future <- 7
+preds_future <- predict(run_final, horizon = n_future)
+
+forecast_mid <- revert_data_final(
+  preds_future$quants[2,,],
+  cols_model,
+  is_future = TRUE
+)
+```
+
+
+```{r}
+# ==============================================================================
+# B2. CI RMSE
+# ==============================================================================
+forecast_low <- forecast_mid
+forecast_upp <- forecast_mid
+
+for(col in cols_model) {
+  err <- results_df$RMSE[results_df$Variable == col]
+  forecast_low[, col] <- pmax(forecast_mid[, col] - 1.96 * err, 0)
+  forecast_upp[, col] <- forecast_mid[, col] + 1.96 * err
+}
+```
+
+
+```{r}
+# ==============================================================================
+# B3. PLOT FUTURE
+# ==============================================================================
+years_fut <- seq(tail(years_hist, 1) + 1, length.out = n_future)
+
+for(col in cols_model) {
+  
+  df_hist <- data.frame(
+    Year = years_hist,
+    Value = df_actual_raw[[col]]
+  )
+  
+  df_future <- data.frame(
+    Year = years_fut,
+    Value = forecast_mid[, col],
+    Lower = forecast_low[, col],
+    Upper = forecast_upp[, col]
+  )
+  
+  last_point <- data.frame(
+    Year = tail(years_hist, 1),
+    Value = tail(df_actual_raw[[col]], 1),
+    Lower = tail(df_actual_raw[[col]], 1),
+    Upper = tail(df_actual_raw[[col]], 1)
+  )
+  
+  df_future_plot <- rbind(last_point, df_future)
+  
+  p <- ggplot() +
+    geom_line(data = df_hist, aes(x = Year, y = Value), color = "black", size = 1) +
+    geom_ribbon(data = df_future_plot,
+                aes(x = Year, ymin = Lower, ymax = Upper),
+                fill = "red", alpha = 0.15) +
+    geom_line(data = df_future_plot,
+              aes(x = Year, y = Value),
+              color = "red", linetype = "dashed") +
+    scale_y_continuous(labels = comma) +
+    theme_minimal() +
+    labs(title = paste("Future Forecast:", col))
+  
+  print(p)  # 🔥 WAJIB
+}
+```
+
+

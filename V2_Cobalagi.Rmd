@@ -1,0 +1,542 @@
+---
+title: "V2_Coba Lagi"
+author: "Maulana Ihsan Athallah"
+date: "2025-11-16"
+output: pdf_document
+---
+
+# **BISMILLAH FINAL PROJECT**
+### **Step 3 : PEMODELAN TIPE 1**
+
+
+### 1. Panggil Library yang akan digunakan
+```{r}
+# === Paket Dasar ===
+library(tidyverse)       # gabungan dplyr, ggplot2, readr, tidyr
+library(data.table)      # manipulasi data cepat (opsional)
+library(scales)          # format angka dan sumbu
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+# === Visualisasi ===
+library(ggplot2)
+library(ggthemes)
+library(viridis)
+
+# === Standarisasi & Machine Learning ===
+library(caret)           # preprocessing (scale, center), evaluasi model
+library(recipes)         # pipeline preprocessing alternatif
+library(tseries)
+library(MASS)
+library(bestNormalize)
+
+# === Deep Learning ===
+library(keras)           # untuk LSTM, optimizer (Adam, Nadam, RMSprop)
+library(tensorflow)      # backend keras
+
+# === Evaluasi ===
+library(Metrics)         # MAE, RMSE, MSE
+
+# === Utilitas ===
+library(glue)            # string interpolation seperti f-string Python
+library(reticulate)      # kalau mau jalankan Python langsung
+library(microbenchmark)  # alternatif timeit
+```
+
+
+### Data Energi Sektor Industri
+
+```{r}
+industri <- read_csv2("industri.csv")
+industri
+```
+
+```{r}
+str(industri)
+```
+
+
+### Data Energi Sektor Rumah Tangga
+
+```{r}
+rumahtangga <- read_csv2("rumahtangga.csv")
+rumahtangga
+```
+
+### Data Energi Sektor Komersial
+
+```{r}
+komersial <- read_csv2("komersial.csv")
+komersial
+```
+
+### Data Perubahan Iklim Emisi CO2
+
+```{r}
+karbon <- read_csv2("karbon.csv")
+karbon
+```
+
+
+### Data Perubahan Iklim Emisi Gas Rumah Kaca
+
+```{r}
+grk <- read_csv2("grk.csv")
+grk
+```
+
+### Data Perubahan Iklim Perubahan Suhu Permukaan
+
+```{r}
+temp <- read_csv("temp.csv")
+temp
+```
+
+#PENGGABUNGAN DATASET
+```{r}
+df_ind_bvar <- industri
+df_rt_bvar <- rumahtangga
+df_kom_bvar <- komersial
+
+# 2. Menambahkan identitas per kolom
+colnames(df_ind_bvar) <- paste0("Ind_", colnames(industri))
+colnames(df_rt_bvar) <- paste0("RT_", colnames(rumahtangga))
+colnames(df_kom_bvar) <- paste0("Kom_", colnames(komersial))
+
+
+df_energy_bvar <- cbind(df_ind_bvar, df_rt_bvar, df_kom_bvar)
+df_energy_bvar
+```
+
+#Cleaning Dataset
+```{r}
+# Nama kolom "Ind_Year" dan ganti dengan "Year"
+colnames(df_energy_bvar)[colnames(df_energy_bvar) == "Ind_Year"] <- "Year"
+
+# 2. Drop Kolom yang tidak dipakai
+cols_to_drop <- c("RT_Year", "Kom_Year", "Ind_Sector", "RT_Sector", "Kom_Sector")
+
+# Pilih semua kolom KECUALI (!) yang ada di daftar cols_to_drop
+df_energy_bvar <- df_energy_bvar[, !colnames(df_energy_bvar) %in% cols_to_drop]
+
+# 4. Buang baris NA
+df_energy_bvar <- na.omit(df_energy_bvar)
+
+# 5. Tampilkan data
+df_energy_bvar
+```
+
+# SPLIT DATASET
+```{r}
+train_ratio <- 0.9
+n <- nrow(df_energy_bvar)
+train_n <- floor(train_ratio * n)
+
+Y_train <- df_energy_bvar[1:train_n, ]
+Y_test  <- df_energy_bvar[(train_n+1):n, ]
+
+cat("Train size:", nrow(Y_train), " | Test size:", nrow(Y_test), "\n")
+```
+
+
+#CEK STASIONERITAS DATASET
+
+```{r}
+#CEK STASIIONERITAS DATA
+
+# --- PASTIKAN PACKAGE TERSERDIA ---
+library(tseries)
+library(dplyr)
+
+# --- PILIH DATA NUMERIK (EXCLUDE 'YEAR') ---
+df_original_data_only <- df_energy_bvar %>%
+  dplyr::select(-Year) %>% 
+  as.data.frame()
+
+# --- FUNGSI CEK STASIONERITAS ---
+# Fungsi untuk menjalankan ADF test pada semua kolom
+check_initial_stationarity <- function(df) {
+  
+  results <- data.frame(
+    Variable = colnames(df),
+    ADF_pvalue = NA_real_,
+    Initial_Status = "",
+    stringsAsFactors = FALSE
+  )
+  
+  for (i in 1:ncol(df)) {
+    kolom <- as.numeric(df[, i])
+    
+    p_value <- tryCatch({
+      tseries::adf.test(kolom)$p.value
+    }, error = function(e) NA_real_)
+    
+    results[i, "ADF_pvalue"] <- round(p_value, 4)
+    
+    # Kriteria: p-value < 0.05 dianggap Stasioner
+    results[i, "Initial_Status"] <- ifelse(
+      is.na(p_value), 
+      "❌ Error/Unstable", 
+      ifelse(p_value < 0.05, "✅ Stationary (Aman)", "❌Tidak Stasioner")
+    )
+  }
+  return(results)
+}
+
+# --- Implementasi ---
+initial_stationarity_check <- check_initial_stationarity(Y_train)
+
+print("--- HASIL CEK STASIONERITAS DATA MENTAH (SEBELUM TRANSFORMASI) ---")
+print(initial_stationarity_check)
+```
+
+
+#STASIONERKAN DATASET
+```{r}
+# ============================================================
+#  HELPER TRANSFORM FUNCTION
+# ============================================================
+try_transform <- function(series, method) {
+
+  series <- as.numeric(series)
+
+  # ------------------------------
+  # LOG
+  # ------------------------------
+  if (method == "log") {
+    shift <- 0
+    if (any(series <= 0)) shift <- abs(min(series)) + 1
+    return(list(
+      transformed = log(series + shift),
+      note = paste0("log (shift=", shift, ")")
+    ))
+  }
+
+  # ------------------------------
+  # SQRT
+  # ------------------------------
+  if (method == "sqrt") {
+    shift <- 0
+    if (any(series < 0)) shift <- abs(min(series))
+    return(list(
+      transformed = sqrt(series + shift),
+      note = paste0("sqrt (shift=", shift, ")")
+    ))
+  }
+
+  # ------------------------------
+  # BOXCOX (safe mode, no constant detection)
+  # ------------------------------
+  if (method == "boxcox") {
+
+    # BoxCox hanya untuk nilai > 0
+    if (any(series <= 0)) return(NULL)
+
+    series_clean <- series[!is.na(series)]
+    if (length(series_clean) < 5) return(NULL)
+
+    bc <- tryCatch(
+      boxcox(series_clean ~ 1),
+      error = function(e) NULL
+    )
+    if (is.null(bc)) return(NULL)
+
+    lambda <- bc$x[which.max(bc$y)]
+    transformed <- (series_clean^lambda - 1) / lambda
+
+    return(list(
+      transformed = transformed,
+      note = paste0("boxcox (λ=", round(lambda, 4), ")")
+    ))
+  }
+
+  # ------------------------------
+  # YEO-JOHNSON
+  # ------------------------------
+  if (method == "yeojohnson") {
+
+    yj <- tryCatch(yeojohnson(series), error = function(e) NULL)
+    if (is.null(yj)) return(NULL)
+
+    transformed <- predict(yj)
+    lambda <- yj$lambda
+
+    return(list(
+      transformed = transformed,
+      note = paste0("yeojohnson (λ=", round(lambda, 4), ")")
+    ))
+  }
+
+  # ------------------------------
+  # ORIGINAL
+  # ------------------------------
+  return(list(
+    transformed = series,
+    note = "original"
+  ))
+}
+
+
+# ============================================================
+#  MAIN FUNCTION: MAKE DATA STATIONARY
+# ============================================================
+make_stationary_advanced <- function(series, signif = 0.05, max_diff = 2, name="") {
+
+  series <- as.numeric(series)
+  series <- series[!is.na(series)]
+
+  methods <- c("original", "log", "sqrt", "boxcox", "yeojohnson")
+
+  best_result <- list(
+    Variable = name,
+    Transform = "original",
+    `Final p-value` = NA,
+    `Diff Applied` = NA,
+    Status = "Tidak Stasioner",
+    `Transformed Series` = series
+  )
+
+  # ======================================================
+  # LOOP TRANSFORM
+  # ======================================================
+  for (method in methods) {
+
+    res <- try_transform(series, method)
+    if (is.null(res)) next
+
+    transformed <- res$transformed
+    note <- res$note
+
+    # ---------------------------------------------------
+    # 1) Transform-only
+    # ---------------------------------------------------
+    p0 <- tryCatch(adf.test(transformed)$p.value, error=function(e)1)
+
+    if (p0 <= signif) {
+      return(list(
+        Variable = name,
+        Transform = note,
+        `Final p-value` = round(p0, 4),
+        `Diff Applied` = 0,
+        Status = "Stasioner",
+        `Transformed Series` = transformed
+      ))
+    }
+
+    # ---------------------------------------------------
+    # 2) Transform + Diff
+    # ---------------------------------------------------
+    for (d in 1:max_diff) {
+
+      temp <- transformed
+      for (i in 1:d) temp <- diff(temp)
+
+      temp <- temp[!is.na(temp)]
+      if (length(temp) < 5) next
+
+      p_val <- tryCatch(adf.test(temp)$p.value, error=function(e)1)
+
+      if (p_val <= signif) {
+        return(list(
+          Variable = name,
+          Transform = note,
+          `Final p-value` = round(p_val, 4),
+          `Diff Applied` = d,
+          Status = "Stasioner",
+          `Transformed Series` = temp
+        ))
+      }
+
+      best_result <- list(
+        Variable = name,
+        Transform = note,
+        `Final p-value` = round(p_val, 4),
+        `Diff Applied` = d,
+        Status = "Tidak Stasioner",
+        `Transformed Series` = temp
+      )
+    }
+  }
+
+  return(best_result)
+}
+```
+
+
+```{r}
+# ============================================================
+#  LOOP SEMUA KOLOM DALAM df_energy_bvar
+# ============================================================
+# pastikan df_energy_bvar sudah loaded sebelumnya
+# df_energy_bvar <- read.csv("...")
+
+exclude_cols <- c("Year","Sector","Entity","Country","Unit")
+
+results_list <- list()
+transformed_list <- list()
+
+for (col in names(Y_train)) {
+
+  if (!(col %in% exclude_cols)) {
+
+    cat("Processing:", col, "\n")
+    res <- make_stationary_advanced(Y_train[[col]], name = col)
+
+    results_list[[col]] <- list(
+      Transform = res$Transform,
+      Final_p_value = res$`Final p-value`,
+      Diff_Applied = res$`Diff Applied`,
+      Status = res$Status
+    )
+
+    transformed_list[[col]] <- res$`Transformed Series`
+  }
+}
+
+# ============================================================
+#  OUTPUT METADATA TRANSFORMASI
+# ============================================================
+results_df <- do.call(rbind, lapply(results_list, as.data.frame))
+results_df$Variable <- rownames(results_df)
+rownames(results_df) <- NULL
+results_df <- results_df[, c("Variable", setdiff(names(results_df), "Variable"))]
+print(results_df)
+
+# ============================================================
+#  SAMAKAN PANJANG TIAP VARIABEL (trim ke minimum)
+# ============================================================
+min_len <- min(sapply(transformed_list, length))
+transformed_trimmed <- lapply(transformed_list, function(x) tail(x, min_len))
+```
+
+
+```{r}
+# ============================================================
+#  DATA AKHIR STASIONER UNTUK BVAR
+# ============================================================
+df_energy_bvar_stas <- as.data.frame(transformed_trimmed)
+
+# tambahkan Year yang sudah disesuaikan
+df_energy_bvar_stas$Year <- tail(df_energy_bvar$Year, min_len)
+df_energy_bvar_stas <- df_energy_bvar_stas[, c("Year", setdiff(names(df_energy_bvar_stas), "Year"))]
+
+cat("\n==== Final Stasioner Dataset ====\n")
+print(head(df_energy_bvar_stas))
+```
+
+
+-> Merubah Dataset Menjadi Time Series
+```{r}
+Y <- ts(df_energy_bvar_stas[, -1],
+        start = 2002,
+        frequency = 1)
+```
+
+
+-> Pemodelan BVAR
+```{r}
+library(BVAR)
+set.seed(123)
+model_bvar <- bvar(Y, lags = 1, n_draw = 3000, n_burn = 1500, verbose = TRUE)
+```
+
+```{r}
+summary(model_bvar)
+```
+
+```{r}
+plot(model_bvar)
+```
+
+-> Forecast BVAR
+```{r}
+set.seed(42)
+h <- ceiling(0.1 * nrow(Y))
+n_total <- nrow(Y)
+n_train <- n_total - h
+Y_train <- Y[1:n_train, ]
+Y_test  <- Y[(n_train + 1):n_total, ]
+
+cat("Jumlah data train:", nrow(Y_train), "\n")
+cat("Jumlah data test :", nrow(Y_test), "\n")
+results <- data.frame()
+```
+
+
+```{r}
+
+```
+
+
+
+-> Set Parameter
+```{r}
+param_grid <- expand.grid(
+  lags   = c(1),
+  n_draw = c(1500),
+  n_burn = c(1000)
+)
+param_grid <- param_grid[param_grid$n_burn < param_grid$n_draw, ]
+```
+
+
+```{r}
+library(foreach)
+library(doParallel)
+cl <- makeCluster(4)   
+registerDoParallel(cl)
+
+
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+results <- list()
+
+mape <- function(a,p) mean(abs((a-p)/a))*100
+mae  <- function(a,p) mean(abs(a-p))
+rmse <- function(a,p) sqrt(mean((a-p)^2))
+
+results <- foreach(i = 1:nrow(param_grid), .combine = rbind,
+                    .packages = "BVAR") %dopar% {
+
+  params <- param_grid[i,]
+  set.seed(42)
+
+  model <- bvar(
+    Y_train,
+    lags = params$lags,
+    n_draw = params$n_draw,
+    n_burn = params$n_burn,
+    hyper = "standard",
+    verbose = TRUE
+  )
+
+  # Forecast
+  fc <- predict(model, bv_fcast(h))
+  fc_mean <- fc$quants["50%", , ]
+
+  # Evaluasi multivariat
+  MAE  <- mae(as.matrix(Y_test), fc_mean)
+  RMSE <- rmse(as.matrix(Y_test), fc_mean)
+  MAPE <- mape(as.matrix(Y_test), fc_mean)
+
+  data.frame(
+    lag    = params$lags,
+    n_draw = params$n_draw,
+    n_burn = params$n_burn,
+    MAE    = MAE,
+    RMSE   = RMSE,
+    MAPE   = MAPE
+  )
+}
+
+stopCluster(cl)
+registerDoSEQ()
+```
+
+-> Best Parameter
+```{r}
+best_params <- results[which.min(results$RMSE), ]
+best_params
+```

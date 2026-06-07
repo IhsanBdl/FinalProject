@@ -1,0 +1,265 @@
+---
+title: "Model_Bvar"
+author: "Maulana Ihsan Athallah"
+date: "2025-09-27"
+output: word_document
+---
+
+-> Load Dataset
+```{r}
+data_energy_bvar = read.csv("D:/PENS22/TUGAS AKHIR/Code Final Project/FinalProject/data_energy_bvar_stas.csv")
+data_energy_bvar
+```
+
+```{r}
+names(data_energy_bvar)[1] = "Year"
+data_energy_bvar
+```
+
+-> Merubah Dataset Menjadi Time Series
+```{r}
+Y <- ts(data_energy_bvar[, -1],
+        start = 2002,
+        frequency = 1)
+```
+
+-> Pemodelan BVAR
+
+```{r}
+library(BVAR)
+set.seed(123)
+model_bvar <- bvar(Y, lags = 3, n_draw = 3000, n_burn = 1500, verbose = TRUE)
+```
+
+```{r}
+summary(model_bvar)
+```
+
+```{r}
+plot(model_bvar)
+```
+
+
+```{r}
+set.seed(42)
+h <- ceiling(0.2 * nrow(Y))
+n_total <- nrow(Y)
+n_train <- n_total - h
+Y_train <- Y[1:n_train, ]
+Y_test  <- Y[(n_train + 1):n_total, ]
+
+cat("Jumlah data train:", nrow(Y_train), "\n")
+cat("Jumlah data test :", nrow(Y_test), "\n")
+results <- data.frame()
+```
+
+set.seed(42)
+model <- bvar(Y_train, lags = 1, n_draw = 2000, n_burn = 1500, verbose = TRUE)
+
+```{r}
+param_grid <- expand.grid(
+  lags   = c(1,2),
+  n_draw = c(1500,2000,2500,3000,3500,4000),
+  n_burn = c(1000,1500,2000,2500,3000,3500)
+)
+param_grid <- param_grid[param_grid$n_burn < param_grid$n_draw, ]
+```
+
+```{r}
+results <- list()
+```
+
+```{r}
+library(foreach)
+library(doParallel)
+cl <- makeCluster(4)   
+registerDoParallel(cl)
+```
+
+#```{r}
+results <- foreach(i = 1:nrow(param_grid), .combine = rbind,
+                   .packages = c("BVAR")) %dopar% {
+
+  params <- param_grid[i, ]
+  set.seed(42)
+  
+  model <- bvar(
+    Y_train,
+    lags   = params$lags,
+    n_draw = params$n_draw,
+    n_burn = params$n_burn,
+    verbose = TRUE
+  )
+  
+  # Forecast
+  fcast_settings <- bv_fcast(horizon = h)
+  fc <- predict(model, fcast_settings)
+  
+  fc_mean <- fc$quants["50%", , ]
+  fc_mean <- fc_mean[1:h, , drop = FALSE]
+  
+  mae <- function(actual, pred) mean(abs(actual - pred))
+  rmse <- function(actual, pred) sqrt(mean((actual - pred)^2))
+  
+  out <- list()
+  for (j in 1:ncol(Y_test)) {
+    forecast_vals <- as.numeric(fc_mean[, j])
+    names(forecast_vals) <- paste0("Forecast_t", 1:h)
+    
+    row <- data.frame(
+      Variable = colnames(Y_test)[j],
+      lag      = params$lags,
+      n_draw   = params$n_draw,
+      n_burn   = params$n_burn,
+      WAIC     = WAIC(model),
+      MAE      = mae(Y_test[, j], forecast_vals),
+      RMSE     = rmse(Y_test[, j], forecast_vals),
+      t(forecast_vals),
+      stringsAsFactors = FALSE
+    )
+    out[[length(out) + 1]] <- row
+  }
+  
+  do.call(rbind, out)
+                   }
+
+stopCluster(cl)
+registerDoSEQ()
+#```
+
+```{r}
+results_tuning_waic <- foreach(i = 1:nrow(param_grid), .combine = rbind,.packages = c("BVAR")) %dopar% {
+  params <- param_grid[i, ]
+  set.seed(42)
+  
+  # Estimasi Model
+  model <- BVAR::bvar(
+    Y_train,
+    lags = params$lags,
+    n_draw = params$n_draw,
+    n_burn = params$n_burn,
+    hyper = "standard", # Tambahkan ini untuk kestabilan
+    verbose = FALSE 
+    )
+  
+  # Hitung WAIC untuk SELURUH SISTEM (Multivariat Measure)
+  waic_sistem <- BVAR::WAIC(model)
+  
+  # Simpan WAIC dan Parameter
+  data.frame(
+    lag = params$lags,
+    n_draw = params$n_draw,
+    n_burn = params$n_burn,
+    WAIC = waic_sistem,
+    stringsAsFactors = FALSE
+    )
+}
+```
+
+
+
+```{r}
+results
+```
+
+```{r}
+## pastikan hasil jadi data.frame dan kolom numeric
+results_df <- as.data.frame(results)
+num_cols <- setdiff(colnames(results_df), "Variable")
+results_df[num_cols] <- lapply(results_df[num_cols], as.numeric)
+```
+
+```{r}
+## --- pilih model terbaik (RMSE terkecil) ---
+library(dplyr)
+best_models <- results_df %>%
+  mutate(total_error = RMSE + MAE) %>%     # atau (RMSE + MAE) / 2
+  group_by(Variable) %>%
+  slice_min(order_by = total_error, n = 1) %>%
+  ungroup()
+
+best_models
+```
+
+```{r}
+library(ggplot2)
+
+plot_forecast_vs_actual_saved <- function(Y_train, Y_test, var_name, best_models, horizon) {
+  best_row <- best_models[best_models$Variable == var_name, ]
+  
+  forecast_cols <- grep("^Forecast_t", names(best_row), value = TRUE)
+  forecast_vals <- as.numeric(best_row[forecast_cols])
+  
+  years <- time(Y_train)
+  forecast_years <- max(years) + 1:horizon
+  
+  actual_vals <- c(Y_train[, var_name], Y_test[, var_name])
+  forecast_vals <- c(rep(NA, nrow(Y_train)), forecast_vals)
+  
+  df_plot <- data.frame(
+    Year = c(years, forecast_years),
+    Actual = actual_vals,
+    Forecast = forecast_vals
+  )
+  
+  # Plot
+  ggplot(df_plot, aes(x = Year)) +
+    geom_line(aes(y = Actual, color = "Actual"), size = 1.2) +
+    geom_line(aes(y = Forecast, color = "Forecast"), size = 1.2, linetype = "dashed") +
+    geom_vline(xintercept = max(years), linetype = "dotted") +
+    labs(
+      title = paste("Forecast vs Aktual untuk", var_name),
+      x = "Tahun",
+      y = "Nilai",
+      color = ""
+    ) +
+    theme_minimal(base_size = 14) +
+    scale_color_manual(values = c("Actual" = "steelblue", "Forecast" = "firebrick"))
+}
+
+for (v in unique(best_models$Variable)) {
+  print(plot_forecast_vs_actual_saved(Y_train, Y_test, v, best_models, horizon = h))
+}
+```
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

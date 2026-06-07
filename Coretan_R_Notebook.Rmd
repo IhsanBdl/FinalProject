@@ -1,0 +1,507 @@
+---
+title: "Coretan - Converted to R"
+output: html_notebook
+---
+
+
+# **BISMILLAH FINAL PROJECT**
+### **Step 3 : PEMODELAN TIPE 1**
+
+
+### 1. Panggil Library yang akan digunakan
+```{r}
+# === Paket Dasar ===
+library(tidyverse)       # gabungan dplyr, ggplot2, readr, tidyr
+library(data.table)      # manipulasi data cepat (opsional)
+library(scales)          # format angka dan sumbu
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+# === Visualisasi ===
+library(ggplot2)
+library(ggthemes)
+library(viridis)
+
+# === Standarisasi & Machine Learning ===
+library(caret)           # preprocessing (scale, center), evaluasi model
+library(recipes)         # pipeline preprocessing alternatif
+
+# === Deep Learning ===
+library(keras)           # untuk LSTM, optimizer (Adam, Nadam, RMSprop)
+library(tensorflow)      # backend keras
+
+# === Evaluasi ===
+library(Metrics)         # MAE, RMSE, MSE
+
+# === Utilitas ===
+library(glue)            # string interpolation seperti f-string Python
+library(reticulate)      # kalau mau jalankan Python langsung
+library(microbenchmark)  # alternatif timeit
+```
+
+### Data Energi Sektor Industri
+
+```{r}
+industri <- read_csv2("industri.csv")
+industri
+```
+
+```{r}
+str(industri)
+```
+
+
+### Data Energi Sektor Rumah Tangga
+
+```{r}
+rumahtangga <- read_csv2("rumahtangga.csv")
+rumahtangga
+```
+
+### Data Energi Sektor Komersial
+
+```{r}
+komersial <- read_csv2("komersial.csv")
+komersial
+```
+
+### Data Perubahan Iklim Emisi CO2
+
+```{r}
+karbon <- read_csv2("karbon.csv")
+karbon
+```
+
+
+### Data Perubahan Iklim Emisi Gas Rumah Kaca
+
+```{r}
+grk <- read_csv2("grk.csv")
+grk
+```
+
+### Data Perubahan Iklim Perubahan Suhu Permukaan
+
+```{r}
+temp <- read_csv("temp.csv")
+temp
+```
+
+#PENGGABUNGAN DATASET
+```{r}
+# 1. Buat salinan dulu (best practice, agar data asli tidak berubah)
+df_ind_bvar <- industri
+df_rt_bvar <- rumahtangga
+df_kom_bvar <- komersial
+
+# 2. Ganti nama kolom (R-nya .add_prefix())
+# Kita pakai paste0() untuk menggabungkan string
+colnames(df_ind_bvar) <- paste0("Ind_", colnames(industri))
+colnames(df_rt_bvar) <- paste0("RT_", colnames(rumahtangga))
+colnames(df_kom_bvar) <- paste0("Kom_", colnames(komersial))
+
+# 3. Gabungkan kolom (R-nya pd.concat(axis=1))
+df_energy_bvar <- cbind(df_ind_bvar, df_rt_bvar, df_kom_bvar)
+
+# Cari nama kolom "Ind_Year" dan ganti dengan "Year"
+colnames(df_energy_bvar)[colnames(df_energy_bvar) == "Ind_Year"] <- "Year"
+
+# 2. R-nya .drop()
+# Buat daftar kolom yang mau dibuang
+cols_to_drop <- c("RT_Year", "Kom_Year", "Ind_Sector", "RT_Sector", "Kom_Sector")
+
+# Pilih semua kolom KECUALI (!) yang ada di daftar cols_to_drop
+df_energy_bvar <- df_energy_bvar[, !colnames(df_energy_bvar) %in% cols_to_drop]
+
+# 4. Buang baris NA (R-nya .dropna())
+df_energy_bvar <- na.omit(df_energy_bvar)
+
+data_energy <- df_energy_bvar
+
+# 5. Tampilkan data
+print(df_energy_bvar)
+```
+
+
+#CEK STASIIONERITAS DATA
+```{r}
+# --- PASTIKAN PACKAGE TERSERDIA ---
+library(tseries)
+library(dplyr)
+
+# --- TAHAP 1: PILIH DATA NUMERIK (EXCLUDE 'YEAR') ---
+# --- MENJADI INI (Pakai dplyr::select) ---
+df_original_data_only <- df_energy_bvar %>%
+  dplyr::select(-Year) %>% # <--- DITAMBAHKAN "dplyr::"
+  as.data.frame()
+
+# --- TAHAP 2: FUNGSI CEK STASIONERITAS ---
+# Fungsi untuk menjalankan ADF test pada semua kolom
+check_initial_stationarity <- function(df) {
+  
+  results <- data.frame(
+    Variable = colnames(df),
+    ADF_pvalue = NA_real_,
+    Initial_Status = "",
+    stringsAsFactors = FALSE
+  )
+  
+  for (i in 1:ncol(df)) {
+    kolom <- as.numeric(df[, i]) # Pastikan data numerik
+    
+    # Jalankan ADF test, menggunakan tryCatch untuk menghindari error data yang ekstrem
+    p_value <- tryCatch({
+      tseries::adf.test(kolom)$p.value
+    }, error = function(e) NA_real_)
+    
+    results[i, "ADF_pvalue"] <- round(p_value, 4)
+    
+    # Kriteria: p-value < 0.05 dianggap Stasioner
+    results[i, "Initial_Status"] <- ifelse(
+      is.na(p_value), 
+      "❌ Error/Unstable", 
+      ifelse(p_value < 0.05, "✅ Stationary (Aman)", "❌ Non-Stationary (Perlu Transformasi)")
+    )
+  }
+  return(results)
+}
+
+# --- TAHAP 3: EKSEKUSI ---
+initial_stationarity_check <- check_initial_stationarity(df_original_data_only)
+
+print("--- HASIL CEK STASIONERITAS DATA MENTAH (SEBELUM TRANSFORMASI) ---")
+print(initial_stationarity_check)
+```
+
+#MENSTASIONERKAN DATASET
+#```{r}
+library(tseries)
+library(forecast)
+library(dplyr)
+
+# --- FUNGSI 1: try_transform_R (Transformasi Awal) ---
+try_transform_R <- function(series, method) {
+  if (method == "log") {
+    shift <- 0
+    if (any(series <= 0, na.rm = TRUE)) { shift <- abs(min(series, na.rm = TRUE)) + 1 }
+    transformed <- log(series + shift)
+    note <- sprintf("log (shift=%.0f)", shift)
+    return(list(transformed = transformed, note = note))
+  } else if (method == "boxcox") {
+      if (any(series <= 0, na.rm = TRUE)) { return(list(transformed = NULL, note = "boxcox (skip, ada nilai <=0)")) }
+    lambda <- forecast::BoxCox.lambda(series)
+    transformed <- forecast::BoxCox(series, lambda = lambda)
+    note <- sprintf("boxcox (λ=%.3f)", lambda)
+    return(list(transformed = transformed, note = note))
+    } else {
+      return(list(transformed = series, note = "original"))
+      }
+}
+
+# --- FUNGSI 2: make_stationary_advanced_R (Main Loop ADF) ---
+make_stationary_advanced_R <- function(series, signif = 0.05, max_diff = 3, name = '') {
+  series <- as.numeric(series)
+  series <- series[!is.na(series)] 
+  methods <- c("log","boxcox")
+  best_result <- list('Variable' = name, 'Transform' = "original", 'Final p-value' = NULL, 'Diff Applied' = NULL, 'Status' = "Tidak Stasioner", 'Transformed_Series' = series )
+  
+  for (method in c("original", methods)) {
+    transform_obj <- NULL 
+    if (method == "original") { transformed <- series; note <- "original" } 
+    else { transform_obj <- try_transform_R(series, method); if (is.null(transform_obj$transformed)) { next }
+    transformed <- transform_obj$transformed; note <- transform_obj$note }
+    for (d in 0:max_diff) {
+      temp <- transformed 
+      if (d > 0) { temp <- diff(temp, differences = d); temp <- temp[!is.na(temp)] }
+      if (length(temp) < 10) { next }
+      p_value <- 1.0 
+      p_value <- tryCatch({ tseries::adf.test(temp)$p.value }, error = function(e) { return(1.0) })
+      
+      if (p_value <= signif) {
+        return(list('Variable' = name, 'Transform' = note, 'Final p-value' = round(p_value, 4), 'Diff Applied' = d, 'Status' = "Stasioner", 'Transformed_Series' = temp ))
+        }
+      best_result <- list('Variable' = name, 'Transform' = note, 'Final p-value' = round(p_value, 4), 'Diff Applied' = d, 'Status' = "Tidak Stasioner", 'Transformed_Series' = temp )
+      } 
+  } 
+  return(best_result) 
+}
+
+# --- EKSEKUSI STASIONERITAS (MEMBUAT TABEL RESEP) ---
+results_list <- list()
+transformed_list <- list()
+metadata_cols <- c("Year")
+data_cols <- setdiff(colnames(df_energy_bvar), metadata_cols) 
+data_energy_original <- df_energy_bvar # Gunakan df gabungan untuk input
+
+for (col_name in data_cols) {
+  # Panggil fungsi stasioneritas untuk setiap kolom
+  res <- make_stationary_advanced_R(data_energy_original[[col_name]], name = col_name)
+  # Simpan resep (tanpa Transformed_Series)
+  results_list[[col_name]] <- res[!names(res) %in% "Transformed_Series"]
+  transformed_list[[col_name]] <- res[['Transformed_Series']]
+}
+
+# --- REKAPITULASI HASIL STASIONERITAS (TABEL OUTPUT) ---
+hasil_diftrans <- dplyr::bind_rows(results_list)
+
+print("--- REKAPITULASI HASIL STASIONERITAS (RESEP BVAR) ---")
+print(hasil_diftrans)
+
+# --- CATATAN ---
+# df_energy_bvar_stationary (data stasioner) dibuat dari transformed_list 
+# dan siap untuk proses BVAR selanjutnya.
+
+
+```{r}
+# === BLOK 1: LOAD PACKAGES DAN DEFINISI FUNGSI ===
+library(tseries)
+library(forecast)
+library(dplyr)
+library(car)
+library(BVAR)
+library(vars)
+library(foreach)
+library(doParallel)
+library(Metrics) 
+library(lubridate) # Diperlukan untuk beberapa manipulasi data
+
+# --- FUNGSI 1: try_transform_R (Versi Rapi) ---
+try_transform_R <- function(series, method) {
+    if (method == "log") {
+        shift <- ifelse(
+            any(series <= 0, na.rm = TRUE), 
+            abs(min(series, na.rm = TRUE)) + 1, 
+            0
+        )
+        transformed <- log(series + shift)
+        note <- sprintf("log (shift=%.0f)", shift)
+        return(list(transformed = transformed, note = note))
+        
+    } else if (method == "yeojohnson") { # <--- BOXCOX DIGANTI
+        
+        # Yeo-Johnson dapat menangani nilai <= 0. Kita estimasi lambda
+        lambda <- suppressWarnings(car::powerTransform(series, family = "yjPower")$lambda)
+        
+        # Terapkan transformasi
+        transformed <- car::yjPower(series, lambda = lambda)
+        note <- sprintf("yeojohnson (λ=%.3f)", lambda)
+        
+        return(list(transformed = transformed, note = note))
+        
+    } else {
+        return(list(transformed = series, note = "original"))
+    }
+}
+
+# --- FUNGSI 2: make_stationary_advanced_R (Main Loop ADF) ---
+make_stationary_advanced_R <- function(series, signif = 0.05, max_diff = 2, name = '') {
+    series <- as.numeric(series); series <- series[!is.na(series)] 
+    methods <- c("log","yeojohnson"); best_result <- list('Variable' = name, 'Transform' = "original", 'Final p-value' = NULL, 'Diff Applied' = NULL, 'Status' = "Tidak Stasioner", 'Transformed_Series' = series )
+    
+    for (method in c("original", methods)) {
+        transform_obj <- NULL 
+        if (method == "original") { transformed <- series; note <- "original" } 
+        else { transform_obj <- try_transform_R(series, method); if (is.null(transform_obj$transformed)) { next }; transformed <- transform_obj$transformed; note <- transform_obj$note }
+        
+        for (d in 0:max_diff) {
+            temp <- transformed 
+            if (d > 0) { temp <- diff(temp, differences = d); temp <- temp[!is.na(temp)] }
+            if (length(temp) < 10) { next }
+            p_value <- 1.0 
+            p_value <- tryCatch({ tseries::adf.test(temp)$p.value }, error = function(e) { return(1.0) })
+            
+            if (p_value <= signif) {
+                return(list('Variable' = name, 'Transform' = note, 'Final p-value' = round(p_value, 4), 'Diff Applied' = d, 'Status' = "Stasioner", 'Transformed_Series' = temp ))
+            }
+            best_result <- list('Variable' = name, 'Transform' = note, 'Final p-value' = round(p_value, 4), 'Diff Applied' = d, 'Status' = "Tidak Stasioner", 'Transformed_Series' = temp )
+        } 
+    } 
+    return(best_result) 
+}
+
+# --- FUNGSI INVERSI (UNTUK BALIKKAN RAMALAN) ---
+parse_shift <- function(transform_note) { gsub(".*shift=([0-9.]+)\\).*", "\\1", transform_note) %>% as.numeric() }
+parse_lambda <- function(transform_note) { gsub(".*λ=([0-9.-]+)\\).*", "\\1", transform_note) %>% as.numeric() }
+invert_transformation <- function(series, transform_note) {
+    
+    if (transform_note == "original") { 
+        return(series) 
+        
+    } else if (grepl("log", transform_note)) { 
+        shift <- parse_shift(transform_note)
+        return(exp(series) - shift)
+        
+    } else if (grepl("yeojohnson", transform_note)) { # <--- Yeo-Johnson Correct
+        lambda <- parse_lambda(transform_note)
+        # Gunakan yjPower dengan inverse = TRUE
+        return(car::yjPower(series, lambda = lambda, inverse = TRUE))
+        
+    } else { 
+        warning(paste("Transformasi tidak dikenal:", transform_note))
+        return(series)
+    }
+}
+invert_differencing <- function(forecast_vec, d, anchor_values) {
+    if (d == 0) return(forecast_vec)
+    temp_forecast <- forecast_vec
+    for (i in d:1) {
+        anchor <- anchor_values[[paste0("d", i - 1)]]
+        temp_forecast <- anchor + cumsum(temp_forecast)
+    }
+    return(temp_forecast)
+}
+get_real_forecast <- function(forecast_df, recipe_book, original_data) {
+    real_forecast_list <- list()
+    for (col_name in colnames(forecast_df)) {
+        resep <- recipe_book[recipe_book$Variable == col_name, ]; if (nrow(resep) == 0) { next }
+        d <- resep$`Diff Applied`; transform_note <- resep$Transform
+        ramalan_mentah <- forecast_df[[col_name]]
+        
+        series_asli <- original_data[[col_name]]; series_asli <- series_asli[!is.na(series_asli)]
+        transform_obj <- try_transform_R(series_asli, method = transform_note)
+        series_transform <- transform_obj$transformed
+        
+        anchor_values <- list(); anchor_values$d0 <- tail(series_transform, 1)
+        if (d >= 2) { anchor_values$d1 <- tail(diff(series_transform, differences = 1), 1) }
+        if (d >= 3) { anchor_values$d2 <- tail(diff(series_transform, differences = 2), 1) }
+        
+        ramalan_transform <- invert_differencing(ramalan_mentah, d, anchor_values)
+        ramalan_nyata <- invert_transformation(ramalan_transform, transform_note)
+        real_forecast_list[[col_name]] <- ramalan_nyata
+    }
+    return(as.data.frame(real_forecast_list))
+}
+```
+
+
+
+```{r}
+# --- KOREKSI BLOK 2: DATA PREP & STASIONERITAS (VERSI DENGAN SCALE) ---
+
+# Simpan data mentah sebagai jangkar (ORIGINAL DATA)
+Y_original_clean <- na.omit(df_energy_bvar)
+
+# --- NEW FIX: DEFINISI DATA_COLS DULU ---
+metadata_cols <- c("Year") 
+data_cols <- setdiff(colnames(Y_original_clean), metadata_cols) 
+
+# --- PENYIMPANAN DATA SCALING (DARI Y_ORIGINAL_CLEAN) ---
+scaling_data <- list()
+# Loop pertama sekarang menggunakan data_cols yang sudah didefinisikan
+for (col in data_cols) { 
+    # Kolom "Year" sudah otomatis dikecualikan
+    series <- Y_original_clean[[col]]
+    scaling_data[[col]] <- list(
+        mean = mean(series, na.rm = TRUE),
+        sd = sd(series, na.rm = TRUE)
+    )
+    # Terapkan scaling ke data original SEBELUM masuk ke stasioneritas
+    Y_original_clean[[col]] <- scale(series, center = TRUE, scale = TRUE)
+}
+# Y_original_clean sekarang berisi data yang sudah distandarisasi
+
+# --- EKSEKUSI STASIONERITAS PADA DATA YANG SUDAH DI-SCALE ---
+results_list <- list(); transformed_list <- list()
+# data_cols sudah benar di sini
+for (col_name in data_cols) {
+    res <- make_stationary_advanced_R(Y_original_clean[[col_name]], name = col_name)
+    results_list[[col_name]] <- res[!names(res) %in% "Transformed_Series"]
+    transformed_list[[col_name]] <- res[['Transformed_Series']]
+}
+
+# Menyimpan Resep (hasil_diftrans)
+hasil_diftrans <- dplyr::bind_rows(results_list)
+
+# Finalisasi Matriks Input BVAR
+max_len <- max(sapply(transformed_list, length))
+padded_list <- lapply(transformed_list, function(v) { c(v, rep(NA, max_len - length(v))) })
+df_energy_bvar_stationary <- as.data.frame(padded_list)
+df_energy_bvar_stationary$Year <- tail(Y_original_clean$Year, nrow(df_energy_bvar_stationary))
+
+df_bvar_clean <- na.omit(df_energy_bvar_stationary)
+Y <- df_bvar_clean[, !colnames(df_bvar_clean) %in% "Year"]
+
+print(hasil_diftrans)
+```
+
+
+
+```{r}
+# --- BLOK 3: TUNING DAN FORECAST FINAL (FINALIZED) ---
+
+# --- 3.1 PREPARASI TRAIN/TEST ---
+set.seed(42)
+h <- ceiling(0.2 * nrow(Y)) # Horizon (20% data untuk Test set)
+n_total <- nrow(Y); n_train <- n_total - h
+
+Y_train <- Y[1:n_train, ]
+
+# --- 3.2 GRID SEARCH WAIC (MULTIVARIAT) ---
+# Mencari lags, n_draw, dan n_burn terbaik (WAIC terbaik = model terbaik)
+param_grid <- expand.grid(
+  lags = c(1), n_draw = c(1500), n_burn = c(1000)
+)
+param_grid <- param_grid[param_grid$n_burn < param_grid$n_draw, ]
+
+cl <- makeCluster(4); registerDoParallel(cl) 
+
+results_multivar_tuning <- foreach(i = 1:nrow(param_grid), .combine = rbind, .packages = c("BVAR")) %dopar% {
+  params <- param_grid[i, ]; set.seed(42)
+  # Tambahkan hyper = "standard" untuk kestabilan BVAR
+  model <- BVAR::bvar(Y_train, lags = params$lags, n_draw = params$n_draw, n_burn = params$n_burn, hyper = "standard", verbose = FALSE)
+  waic_val <- BVAR::WAIC(model)
+  data.frame(lags = params$lags, n_draw = params$n_draw, n_burn = params$n_burn, WAIC = waic_val, stringsAsFactors = FALSE)
+}
+
+stopCluster(cl); registerDoSEQ()
+
+best_params <- results_multivar_tuning %>% slice_min(order_by = WAIC, n = 1) %>% head(1)
+print(paste("Parameter Terbaik Ditemukan: Lags =", best_params$lags, "| Draw:", best_params$n_draw, "| WAIC:", round(best_params$WAIC, 2)))
+
+
+# --- 3.3 FINAL FORECAST DAN INVERSI ---
+
+# 1. Latih model terbaik di seluruh data bersih (Y)
+model_final_bvar <- BVAR::bvar(
+    data = Y, 
+    lags = best_params$lags, 
+    n_draw = best_params$n_draw, 
+    n_burn = best_params$n_burn, 
+    hyper = "standard"
+)
+
+# 2. Ramal 3 tahun ke depan
+fcast_settings <- bv_fcast(horizon = 3) 
+forecast_final_obj <- predict(model_final_bvar, fcast_settings)
+
+# 3. Ekstraksi Ramalan Stasioner (Median 50%)
+forecast_final_stasioner_df <- as.data.frame(
+  forecast_final_obj$quants["50%", , , drop = FALSE]
+)
+if (nrow(forecast_final_stasioner_df) == 1) {
+  forecast_final_stasioner_df <- t(forecast_final_stasioner_df) %>% as.data.frame()
+  colnames(forecast_final_stasioner_df) <- colnames(Y)
+}
+
+
+# 4. BALIKKAN KE DATA NYATA (INVERSI)
+# PENTING: Jika Anda menggunakan standardisasi (scale()) di Langkah 2, 
+# Hasil 'ramalan_nyata_final' di sini masih dalam skala TERSTANDAR
+ramalan_nyata_final <- get_real_forecast(
+  forecast_df = forecast_final_stasioner_df,
+  recipe_book = hasil_diftrans,
+  original_data = Y_original_clean # Data mentah/asli untuk jangkar
+)
+
+# 5. Tambahkan kolom Tahun dan Print
+tahun_terakhir_data <- tail(Y_original_clean$Year, 1)
+ramalan_nyata_final$Year <- tahun_terakhir_data + 1:3 
+ramalan_nyata_final <- ramalan_nyata_final %>% select(Year, everything())
+
+print("=================================================================")
+print("✅ HASIL RAMALAN KONSUMSI ENERGI (NYATA) 3 TAHUN KE DEPAN")
+print("=================================================================")
+print(ramalan_nyata_final)
+```
+
