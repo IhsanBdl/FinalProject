@@ -4,240 +4,672 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SIECCI — Predictive Modeling & Causality of Energy Consumption and Climate Change in Indonesia</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
+/* ═══════════════════════════════════════════════
+   SIECCI v4 — Premium Light · Editorial Theme
+   Sophisticated, modern, data-intelligence feel
+═══════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,600;1,9..144,700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
 :root {
-  --bg:#F5F3EF; --surface:#FFF; --surface2:#F0EDE8; --border:#E0DBD3; --border2:#C8C2B8;
-  --text:#1C1A17; --text2:#4A4540; --muted:#8C8278;
-  --forest:#2D5016; --forest-l:rgba(45,80,22,.09);
-  --ocean:#1A4A6B;  --ocean-l:rgba(26,74,107,.09);
-  --rust:#B84A1C;   --rust-l:rgba(184,74,28,.09);
-  --teal:#1A7A6B;   --teal-l:rgba(26,122,107,.09);
-  --serif:'Fraunces',Georgia,serif;
-  --sans:'DM Sans',system-ui,sans-serif;
+  /* Backgrounds */
+  --bg:       #FAFAF8;
+  --surface:  #FFFFFF;
+  --surface2: #F3F4F6;
+  --surface3: #F0F6F1;
+
+  /* Borders */
+  --border:   #E5E7EB;
+  --border2:  #D1D5DB;
+
+  /* Text */
+  --text:  #111827;
+  --text2: #374151;
+  --muted: #6B7280;
+
+  /* ── Accents — matching SIECCI dashboard ── */
+  --forest:   #1A6B3C;   /* Deep elegant green (primary) */
+  --fv:       #16A34A;   /* Vibrant interactive green */
+  --forest-l: rgba(22,163,74,.09);
+  --forest-m: rgba(22,163,74,.18);
+  --forest-d: rgba(22,163,74,.03);
+
+  --teal:     #0F766E;
+  --teal-l:   rgba(15,118,110,.09);
+
+  --ocean:    #1D4ED8;
+  --ocean-l:  rgba(29,78,216,.09);
+
+  --rust:     #C2410C;
+  --rust-l:   rgba(194,65,12,.09);
+
+  /* Typography */
+  --serif: 'Fraunces', Georgia, serif;
+  --sans:  'DM Sans', system-ui, sans-serif;
+
+  /* Tokens */
+  --radius-card: 16px;
+  --radius-btn:  10px;
+
+  --shadow-xs:   0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.03);
+  --shadow-sm:   0 2px 8px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.04);
+  --shadow-card: 0 4px 16px rgba(0,0,0,.05), 0 12px 40px rgba(0,0,0,.07);
+  --shadow-card-hover: 0 16px 56px rgba(0,0,0,.12), 0 4px 16px rgba(0,0,0,.06);
+  --shadow-btn:  0 4px 16px rgba(22,163,74,.28);
+  --shadow-btn-h:0 8px 32px rgba(22,163,74,.38);
 }
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-html{scroll-behavior:smooth;}
-body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:15px;line-height:1.65;}
 
-/* ── TOPNAV ── */
-#topnav{position:sticky;top:0;z-index:200;background:rgba(245,243,239,.96);border-bottom:1px solid var(--border);backdrop-filter:blur(10px);}
-.nav-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;padding:0 2rem;height:60px;gap:1.5rem;}
-.nav-brand{display:flex;align-items:center;gap:0;cursor:pointer;flex-shrink:0;padding:2px 0;}
-.nav-bmark{width:32px;height:32px;border-radius:7px;background:var(--forest);display:flex;align-items:center;justify-content:center;}
-.nav-bmark svg{width:16px;height:16px;}
-.nav-bname{font-family:var(--sans);font-size:14px;font-weight:700;color:var(--text);letter-spacing:.02em;}
-.nav-divider{width:1px;height:24px;background:var(--border);flex-shrink:0;}
-.nav-tabs{display:flex;gap:2px;flex:1;}
-.nt{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:400;color:var(--muted);white-space:nowrap;transition:all .17s;border:none;background:none;font-family:var(--sans);}
-.nt:hover{color:var(--text);background:var(--surface2);}
-.nt.active{color:var(--forest);background:var(--forest-l);font-weight:600;}
-.nt svg{width:15px;height:15px;opacity:.6;flex-shrink:0;}
-.nt.active svg{opacity:1;}
-.nav-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+/* ─── RESET & BASE ─── */
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-x: hidden;
+}
 
-/* Language toggle */
-.lang-toggle{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
-.lang-btn{padding:5px 11px;font-size:12px;font-weight:600;font-family:var(--sans);border:none;background:none;cursor:pointer;color:var(--muted);transition:all .15s;line-height:1;}
-.lang-btn.active{background:var(--forest);color:#fff;}
+/* Grain texture overlay */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(249,250,251,.9) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
 
-.nav-cta{background:var(--forest);color:#fff;border:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:all .18s;}
-.nav-cta:hover{background:#3a6620;transform:translateY(-1px);box-shadow:0 4px 16px rgba(45,80,22,.25);}
+/* ─── SCROLL PROGRESS ─── */
+#scroll-progress {
+  position: fixed; top: 0; left: 0;
+  height: 2.5px; width: 0%;
+  background: linear-gradient(90deg, var(--fv), var(--teal));
+  z-index: 1000;
+  transition: width .1s linear;
+  box-shadow: 0 0 8px rgba(22,163,74,.5);
+}
 
-/* ── PAGE SYSTEM ── */
-.page{display:none;}
-.page.active{display:block;animation:pgin .3s ease-out;}
-@keyframes pgin{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+/* ─── LOADER ─── */
+#loader {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1.5rem;
+  transition: opacity .7s ease, visibility .7s ease;
+}
+#loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.loader-mark {
+  width: 58px; height: 58px; border-radius: 16px;
+  background: var(--forest);
+  display: flex; align-items: center; justify-content: center;
+  animation: loaderPulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(22,163,74,.4);
+}
+@keyframes loaderPulse {
+  0%,100% { transform:scale(1); box-shadow:0 0 0 0 rgba(22,163,74,.4); }
+  50%      { transform:scale(1.06); box-shadow:0 0 0 18px rgba(22,163,74,0); }
+}
+.loader-bar {
+  width: 200px; height: 2px;
+  background: var(--border); border-radius: 2px; overflow: hidden;
+}
+.loader-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--fv), var(--teal));
+  border-radius: 2px;
+  animation: loaderFill 1.4s cubic-bezier(.4,0,.2,1) forwards;
+}
+@keyframes loaderFill { from { width:0 } to { width:100% } }
+.loader-text {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+}
 
-/* ── SHARED ── */
-.container{max-width:1200px;margin:0 auto;padding:4.5rem 2.5rem;}
-.section-label{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--forest);margin-bottom:.6rem;display:flex;align-items:center;gap:8px;}
-.section-label::after{content:'';width:24px;height:1px;background:var(--forest);opacity:.5;}
-.section-title{font-family:var(--serif);font-size:clamp(1.9rem,3.5vw,2.8rem);color:var(--text);line-height:1.2;margin-bottom:.9rem;letter-spacing:-.02em;}
-.section-lead{font-size:15.5px;color:var(--text2);max-width:680px;line-height:1.85;margin-bottom:3rem;text-align:justify;}
+/* ─── CURSOR GLOW ─── */
+.cursor-glow {
+  position: fixed; width: 480px; height: 480px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(22,163,74,.045) 0%, transparent 70%);
+  pointer-events: none; z-index: 1;
+  transform: translate(-50%,-50%);
+  transition: left .1s linear, top .1s linear;
+}
 
-/* Sub-section in About (scroll-based) */
-.sub-section{padding:4rem 0;border-top:1px solid var(--border);}
-.sub-section:first-child{border-top:none;padding-top:0;}
+/* ─── TOPNAV ─── */
+#topnav {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(246,249,246,.9);
+  border-bottom: 1px solid rgba(221,232,223,.7);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  transition: background .3s, box-shadow .3s;
+}
+#topnav.scrolled {
+  background: rgba(246,249,246,.97);
+  box-shadow: 0 4px 40px rgba(0,0,0,.07);
+}
+.nav-inner {
+  max-width: 1400px; margin: 0 auto;
+  display: flex; align-items: center;
+  padding: 0 2rem; height: 64px; gap: 1.5rem;
+}
+.nav-brand { display:flex; align-items:center; cursor:pointer; flex-shrink:0; transition:opacity .2s; }
+.nav-brand:hover { opacity: .75; }
+.nav-bmark {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--forest);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 12px rgba(26,107,60,.28);
+  transition: all .25s;
+}
+.nav-brand:hover .nav-bmark { transform: rotate(-5deg) scale(1.05); }
+.nav-bmark svg { width: 16px; height: 16px; }
+.nav-bname {
+  font-family: var(--sans); font-size: 14px; font-weight: 700;
+  color: var(--text); letter-spacing: .02em;
+}
+.nav-divider { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+.nav-tabs { display: flex; gap: 2px; flex: 1; }
+.nt {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 15px; border-radius: 8px;
+  cursor: pointer; font-size: 13px; font-weight: 400;
+  color: var(--muted); white-space: nowrap;
+  transition: all .22s cubic-bezier(.4,0,.2,1);
+  border: none; background: none;
+  font-family: var(--sans); position: relative;
+}
+.nt::after {
+  content:''; position:absolute; bottom:4px;
+  left:50%; transform:translateX(-50%) scaleX(0);
+  width:20px; height:1.5px;
+  background: var(--fv); border-radius:2px;
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+}
+.nt:hover { color:var(--text); background:var(--surface2); }
+.nt.active { color:var(--forest); background:var(--forest-l); font-weight:600; }
+.nt.active::after { transform: translateX(-50%) scaleX(1); }
+.nt svg { width:15px; height:15px; opacity:.55; flex-shrink:0; transition:opacity .2s; }
+.nt.active svg { opacity:1; }
+.nav-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
 
-/* Sub-nav pills inside About */
-.about-subnav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:3rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border);}
-.subnav-pill{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:500;color:var(--muted);border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all .15s;text-decoration:none;}
-.subnav-pill:hover{color:var(--forest);border-color:rgba(45,80,22,.3);background:var(--forest-l);}
+.lang-toggle {
+  display:flex; background:var(--surface2);
+  border:1px solid var(--border); border-radius:8px; overflow:hidden;
+}
+.lang-btn {
+  padding:6px 12px; font-size:12px; font-weight:600;
+  font-family:var(--sans); border:none; background:none;
+  cursor:pointer; color:var(--muted); transition:all .2s; line-height:1;
+}
+.lang-btn.active { background:var(--forest); color:#fff; font-weight:700; }
 
-/* ── HERO ── */
-.hero{min-height:calc(100vh - 60px);display:flex;flex-direction:column;justify-content:center;padding:5rem 2.5rem 4rem;max-width:1200px;margin:0 auto;}
-.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--forest);background:var(--forest-l);padding:5px 12px;border-radius:4px;border:1px solid rgba(45,80,22,.15);margin-bottom:2rem;width:fit-content;}
-.hero-title{font-family:var(--serif);font-size:clamp(2.8rem,5vw,4.2rem);color:var(--text);line-height:1.1;margin-bottom:1.5rem;letter-spacing:-.02em;max-width:860px;}
-.hero-title em{color:var(--forest);font-style:italic;}
-.hero-subtitle{font-size:17px;color:var(--text2);max-width:600px;line-height:1.8;margin-bottom:2.5rem;}
-.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:3rem;}
-.btn-primary{background:var(--forest);color:#fff;border:none;padding:13px 28px;border-radius:7px;font-size:14px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:all .2s;}
-.btn-primary:hover{background:#3a6620;transform:translateY(-1px);box-shadow:0 6px 20px rgba(45,80,22,.25);}
-.btn-outline{background:transparent;color:var(--text);border:1.5px solid var(--border2);padding:12px 28px;border-radius:7px;font-size:14px;font-weight:500;font-family:var(--sans);cursor:pointer;transition:all .2s;}
-.btn-outline:hover{border-color:var(--text);background:var(--surface2);}
-.sdg-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:3.5rem;}
-.sdg-pill{font-family:var(--sans);font-size:12px;font-weight:600;padding:5px 12px;border-radius:4px;letter-spacing:.02em;}
-.sdg-7{background:rgba(196,123,26,.12);color:#8a5500;border:1px solid rgba(196,123,26,.25);}
-.sdg-13{background:rgba(45,80,22,.10);color:var(--forest);border:1px solid rgba(45,80,22,.22);}
-.sdg-note{font-size:12px;color:var(--muted);}
-.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;max-width:700px;}
-.hstat{padding:1.25rem 1.5rem;border-right:1px solid var(--border);text-align:center;}
-.hstat:last-child{border-right:none;}
-.hstat-n{font-family:var(--serif);font-size:28px;color:var(--forest);line-height:1;margin-bottom:5px;font-weight:600;}
-.hstat-l{font-size:11.5px;color:var(--muted);line-height:1.4;font-weight:400;}
+.nav-cta {
+  background: var(--forest); color: #fff;
+  border: none; padding: 9px 20px;
+  border-radius: var(--radius-btn); font-size: 13px; font-weight: 600;
+  font-family: var(--sans); cursor: pointer;
+  transition: all .25s cubic-bezier(.4,0,.2,1);
+  box-shadow: var(--shadow-btn);
+}
+.nav-cta:hover { background: #155e34; transform: translateY(-1.5px); box-shadow: var(--shadow-btn-h); }
+.nav-cta:active { transform: translateY(0); }
 
-/* ── CARDS ── */
-.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.25rem;}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.6rem;transition:all .22s;}
-.card:hover{box-shadow:0 4px 20px rgba(0,0,0,.07);transform:translateY(-2px);}
-.card-icon{width:38px;height:38px;border-radius:9px;background:var(--forest-l);display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:1rem;}
-.card h3{font-family:var(--serif);font-size:17px;color:var(--text);margin-bottom:.5rem;}
-.card p{font-size:13.5px;color:var(--text2);line-height:1.75;text-align:justify;}
+/* ─── PAGE SYSTEM ─── */
+.page { display:none; position:relative; z-index:2; }
+.page.active { display:block; animation: pgin .5s cubic-bezier(.4,0,.2,1); }
+@keyframes pgin { from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);} }
 
-/* ── STAT BLOCKS ── */
-.stat-block{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;border-left:3px solid var(--forest);}
-.stat-block.ocean{border-left-color:var(--ocean);}
-.stat-block.rust{border-left-color:var(--rust);}
-.stat-block.teal{border-left-color:var(--teal);}
-.stat-block .sbn{font-family:var(--serif);font-size:22px;font-weight:600;color:var(--text);margin-bottom:3px;}
-.stat-block .sbl{font-size:12.5px;color:var(--text2);line-height:1.55;}
-.stat-block .sbs{font-size:11px;color:var(--muted);margin-top:5px;font-style:italic;}
+/* ─── SHARED ─── */
+.container { max-width:1200px; margin:0 auto; padding:4.5rem 2.5rem; }
+.section-label {
+  font-family:var(--sans); font-size:11px; font-weight:700;
+  letter-spacing:.15em; text-transform:uppercase; color:var(--fv);
+  margin-bottom:.65rem;
+  display:flex; align-items:center; gap:8px;
+}
+.section-label::before {
+  content:''; width:16px; height:2px;
+  background:var(--fv); border-radius:2px; flex-shrink:0;
+}
+.section-label::after {
+  content:''; width:6px; height:6px;
+  background:var(--fv); border-radius:50%; flex-shrink:0;
+  animation: labelDot 2s ease-in-out infinite;
+}
+@keyframes labelDot { 0%,100%{opacity:1;}50%{opacity:.3;} }
+.section-title {
+  font-family:var(--serif);
+  font-size:clamp(1.9rem,3.5vw,2.8rem);
+  color:var(--text); line-height:1.14;
+  margin-bottom:.9rem; letter-spacing:-.03em;
+}
+.section-lead {
+  font-size:15.5px; color:var(--text2);
+  max-width:680px; line-height:1.85;
+  margin-bottom:3rem; text-align:justify;
+}
 
-/* ── TWO-COL ── */
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-bottom:2.5rem;}
-.two-col-wide{display:grid;grid-template-columns:1.1fr .9fr;gap:2.5rem;margin-bottom:2.5rem;}
+.sub-section { padding:4rem 0; border-top:1px solid var(--border); }
+.sub-section:first-child { border-top:none; padding-top:0; }
 
-/* ── INFOBOX ── */
-.infobox{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:2rem;margin-bottom:1.5rem;}
-.infobox-title{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);padding-bottom:.75rem;margin-bottom:1.25rem;border-bottom:1px solid var(--border);}
-.infobox-title.forest{color:var(--forest);}
-.infobox-title.ocean{color:var(--ocean);}
-.infobox-title.rust{color:var(--rust);}
+.about-subnav {
+  display:flex; gap:8px; flex-wrap:wrap;
+  margin-bottom:3rem; padding-bottom:1.5rem; border-bottom:1px solid var(--border);
+}
+.subnav-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:7px 16px; border-radius:24px;
+  font-size:12.5px; font-weight:500; color:var(--muted);
+  border:1px solid var(--border); background:var(--surface);
+  cursor:pointer; transition:all .22s cubic-bezier(.4,0,.2,1);
+  text-decoration:none;
+}
+.subnav-pill:hover { color:var(--forest); border-color:rgba(22,163,74,.3); background:var(--forest-l); transform:translateY(-1.5px); box-shadow:var(--shadow-xs); }
+.subnav-pill.open { color:var(--forest); border-color:rgba(22,163,74,.3); background:var(--forest-l); font-weight:600; }
 
-/* ── ITEM ROWS ── */
-.irow{display:flex;gap:11px;margin-bottom:.9rem;align-items:flex-start;}
-.irow:last-child{margin-bottom:0;}
-.inum{font-family:var(--sans);font-size:11px;font-weight:700;color:var(--forest);background:var(--forest-l);width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
-.inum.ocean{color:var(--ocean);background:var(--ocean-l);}
-.inum.teal{color:var(--teal);background:var(--teal-l);}
-.irow p{font-size:13.5px;color:var(--text2);line-height:1.7;}
-.idot{width:7px;height:7px;border-radius:50%;background:var(--forest);flex-shrink:0;margin-top:7px;}
-.idot.teal{background:var(--teal);}
-.idot.ocean{background:var(--ocean);}
-.idot.rust{background:var(--rust);}
+/* ─── HERO ─── */
+.hero {
+  min-height: calc(100vh - 64px);
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5rem 2.5rem 4rem;
+  max-width:1200px; margin:0 auto;
+  position:relative; z-index:2;
+}
+.hero-bg { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+.hero-orb {
+  position:absolute; border-radius:50%;
+  filter:blur(70px); animation:orbFloat 12s ease-in-out infinite;
+}
+.hero-orb-1 { width:700px; height:700px; background:radial-gradient(circle,rgba(22,163,74,.07),transparent 70%); top:-15%; left:-10%; animation-delay:0s; }
+.hero-orb-2 { width:500px; height:500px; background:radial-gradient(circle,rgba(15,118,110,.055),transparent 70%); bottom:5%; right:-5%; animation-delay:-5s; }
+.hero-orb-3 { width:400px; height:400px; background:radial-gradient(circle,rgba(29,78,216,.04),transparent 70%); top:40%; left:55%; animation-delay:-9s; }
+@keyframes orbFloat {
+  0%,100%{transform:translate(0,0) scale(1);}
+  33%{transform:translate(25px,-20px) scale(1.04);}
+  66%{transform:translate(-15px,15px) scale(.97);}
+}
 
-/* ── TAG ── */
-.tag{display:inline-block;font-family:var(--sans);font-size:11px;font-weight:600;padding:3px 9px;border-radius:4px;letter-spacing:.01em;}
-.tag-f{background:var(--forest-l);color:var(--forest);}
-.tag-t{background:var(--teal-l);color:var(--teal);}
-.tag-o{background:var(--ocean-l);color:var(--ocean);}
-.tag-m{background:var(--surface2);color:var(--muted);}
-.tag-r{background:var(--rust-l);color:var(--rust);}
+.hero-eyebrow {
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:var(--sans); font-size:11.5px; font-weight:700;
+  letter-spacing:.1em; text-transform:uppercase;
+  color:var(--forest); background:var(--forest-l);
+  padding:6px 14px; border-radius:6px;
+  border:1px solid rgba(22,163,74,.2);
+  margin-bottom:2rem; width:fit-content;
+  animation:fadeUp .6s .1s both;
+}
 
-/* ── DATA TABLE ── */
-.dtable-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:1.5rem;}
-.dtable-head{display:grid;grid-template-columns:64px 1.1fr 1.4fr 1fr .7fr;padding:.7rem 1.4rem;background:var(--surface2);font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);gap:1rem;}
-.drow{display:grid;grid-template-columns:64px 1.1fr 1.4fr 1fr .7fr;padding:.8rem 1.4rem;border-bottom:1px solid var(--border);font-size:13px;gap:1rem;align-items:center;transition:background .14s;}
-.drow:last-child{border-bottom:none;}
-.drow:hover{background:var(--surface2);}
-.drow.iklim{background:rgba(26,122,107,.04);}
-.drow.iklim:hover{background:rgba(26,122,107,.08);}
-.var-code{font-family:var(--sans);font-size:11px;font-weight:700;color:var(--forest);background:var(--forest-l);padding:2px 7px;border-radius:3px;width:fit-content;}
-.var-code.teal{color:var(--teal);background:var(--teal-l);}
-.var-name{color:var(--text);font-weight:500;font-size:13px;}
-.var-name.teal{color:var(--teal);}
-.var-desc{color:var(--text2);font-size:12.5px;}
-.var-src{color:var(--muted);font-size:12px;}
+/* ─── HERO TITLE — Two elegant accents ─── */
+.hero-title {
+  font-family: var(--serif);
+  font-size: clamp(2.6rem, 5.2vw, 4.8rem);
+  color: var(--text); line-height: 1.08;
+  margin-bottom: 1.5rem; letter-spacing: -.038em;
+  max-width: 920px;
+  animation: fadeUp .65s .2s both;
+  font-weight: 600;
+}
+.accent-energy {
+  color: var(--forest);
+  font-style: italic;
+  font-weight: 600;
+  position: relative;
+  display: inline-block;
+}
+.accent-energy::after {
+  content: '';
+  position: absolute;
+  bottom: 3px; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--forest), var(--fv));
+  border-radius: 2px;
+  transform: scaleX(0); transform-origin: left;
+  animation: lineSlideIn .7s .9s cubic-bezier(.4,0,.2,1) forwards;
+}
+.accent-climate {
+  color: var(--teal);
+  font-style: italic;
+  font-weight: 600;
+  position: relative;
+  display: inline-block;
+}
+.accent-climate::after {
+  content: '';
+  position: absolute;
+  bottom: 3px; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--teal), var(--ocean));
+  border-radius: 2px;
+  transform: scaleX(0); transform-origin: left;
+  animation: lineSlideIn .7s 1.15s cubic-bezier(.4,0,.2,1) forwards;
+}
+@keyframes lineSlideIn { from{transform:scaleX(0);}to{transform:scaleX(1);} }
 
-/* ── METHOD CARDS ── */
-.method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-bottom:2rem;}
-.mcard{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.75rem;position:relative;overflow:hidden;transition:all .22s;}
-.mcard::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--forest);transform:scaleX(0);transition:transform .3s;transform-origin:left;}
-.mcard.teal::after{background:var(--teal);}
-.mcard.ocean::after{background:var(--ocean);}
-.mcard:hover::after{transform:scaleX(1);}
-.mcard:hover{box-shadow:0 4px 18px rgba(0,0,0,.08);transform:translateY(-2px);}
-.mc-num{font-family:var(--serif);font-size:44px;color:rgba(0,0,0,.04);position:absolute;top:.6rem;right:1.1rem;line-height:1;pointer-events:none;font-weight:700;}
-.mc-tag{font-family:var(--sans);font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--forest);margin-bottom:.7rem;}
-.mcard.teal .mc-tag{color:var(--teal);}
-.mcard.ocean .mc-tag{color:var(--ocean);}
-.mcard h3{font-family:var(--serif);font-size:18px;color:var(--text);margin-bottom:.65rem;line-height:1.3;}
-.mcard p{font-size:13px;color:var(--text2);line-height:1.75;}
-.mc-badge{display:inline-block;margin-top:.9rem;font-family:var(--sans);font-size:11px;font-weight:500;padding:3px 9px;border-radius:3px;background:var(--surface2);color:var(--muted);}
+.hero-subtitle {
+  font-size: 16.5px; color: var(--text2);
+  max-width: 600px; line-height: 1.85; margin-bottom: 2.5rem;
+  animation: fadeUp .65s .3s both;
+}
+.hero-actions { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:2.5rem; animation:fadeUp .65s .4s both; }
 
-/* ── COMPARISON TABLE ── */
-.ctable-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:1.5rem;}
-.ctable-head{display:grid;gap:1rem;padding:.7rem 1.4rem;background:var(--surface2);font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
-.ctable-head.c4{grid-template-columns:1.5fr .9fr .9fr 1.3fr;}
-.ctable-head.c3{grid-template-columns:1.5fr 1fr 1.5fr;}
-.crow{display:grid;gap:1rem;padding:.85rem 1.4rem;border-bottom:1px solid var(--border);font-size:13px;align-items:center;transition:background .14s;}
-.crow:last-child{border-bottom:none;}
-.crow:hover{background:var(--surface2);}
-.crow.c4{grid-template-columns:1.5fr .9fr .9fr 1.3fr;}
-.crow.c3{grid-template-columns:1.5fr 1fr 1.5fr;}
-.crow.winner{background:var(--forest-l);}
-.crow.winner .cn{color:var(--forest);}
-.crow .cn{font-weight:500;color:var(--text);}
-.crow .cm{font-size:12.5px;color:var(--text2);font-weight:500;}
-.crow .cd{font-size:12.5px;color:var(--text2);}
+@keyframes fadeUp { from{opacity:0;transform:translateY(26px);}to{opacity:1;transform:translateY(0);} }
 
-/* ── FINDINGS ── */
-.fb{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:2rem;}
-.fb h3{font-family:var(--serif);font-size:20px;color:var(--text);margin-bottom:1.25rem;padding-bottom:.75rem;border-bottom:1px solid var(--border);}
+.btn-primary {
+  background: var(--forest); color: #fff;
+  border: none; padding: 14px 28px;
+  border-radius: var(--radius-btn); font-size: 14px; font-weight: 600;
+  font-family: var(--sans); cursor: pointer;
+  transition: all .28s cubic-bezier(.4,0,.2,1);
+  box-shadow: var(--shadow-btn);
+  display: inline-flex; align-items: center; gap: 8px;
+  position: relative; overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.12), transparent);
+}
+.btn-primary:hover { background: #155e34; transform: translateY(-2.5px); box-shadow: var(--shadow-btn-h); }
+.btn-primary:active { transform: translateY(0); }
 
-/* ── DASHBOARD ── */
-.dash-header{background:var(--surface);border-bottom:1px solid var(--border);padding:2rem 2.5rem;}
-.dash-header-inner{max-width:1620px;margin:0 auto;}
-.dash-header h2{font-family:var(--serif);font-size:26px;color:var(--text);margin-bottom:4px;}
-.dash-header p{font-size:13.5px;color:var(--muted);}
-.dash-tag-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:.75rem;}
-.dtag{font-family:var(--sans);font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;letter-spacing:.01em;}
-.dtag-g{background:var(--forest-l);color:var(--forest);border:1px solid rgba(45,80,22,.2);}
-.dtag-t{background:var(--teal-l);color:var(--teal);border:1px solid rgba(26,122,107,.2);}
-.dtag-m{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
-.dash-body{max-width:1620px;margin:0 auto;padding:2rem 2.5rem;}
-.viz-shell{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04);}
-.viz-header{padding:16px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.vdots{display:flex;gap:6px;}
-.vd{width:10px;height:10px;border-radius:50%;}
+.btn-outline {
+  background: var(--surface); color: var(--text);
+  border: 1.5px solid var(--border2);
+  padding: 13px 26px; border-radius: var(--radius-btn);
+  font-size: 14px; font-weight: 500; font-family: var(--sans);
+  cursor: pointer; transition: all .24s cubic-bezier(.4,0,.2,1);
+}
+.btn-outline:hover { border-color:var(--forest); color:var(--forest); background:var(--forest-l); transform:translateY(-1.5px); }
+
+.sdg-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:3rem; animation:fadeUp .65s .5s both; }
+.sdg-pill {
+  font-family:var(--sans); font-size:12px; font-weight:600;
+  padding:6px 13px; border-radius:6px; letter-spacing:.02em;
+  transition:all .22s;
+}
+.sdg-pill:hover { transform:translateY(-1.5px); box-shadow:var(--shadow-xs); }
+.sdg-7  { background:rgba(194,65,12,.08); color:var(--rust); border:1px solid rgba(194,65,12,.22); }
+.sdg-13 { background:var(--forest-l); color:var(--forest); border:1px solid rgba(22,163,74,.25); }
+.sdg-note { font-size:12px; color:var(--muted); }
+
+.hero-stats {
+  display:grid; grid-template-columns:repeat(4,1fr);
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); overflow:hidden; max-width:700px;
+  animation:fadeUp .65s .65s both;
+  box-shadow:var(--shadow-sm);
+}
+.hstat { padding:1.4rem 1.5rem; border-right:1px solid var(--border); text-align:center; transition:background .25s; }
+.hstat:hover { background:var(--surface2); }
+.hstat:last-child { border-right:none; }
+.hstat-n {
+  font-family:var(--serif); font-size:28px; color:var(--forest);
+  line-height:1; margin-bottom:5px; font-weight:700;
+  transition:transform .22s;
+}
+.hstat:hover .hstat-n { transform:scale(1.06); }
+.hstat-l { font-size:11.5px; color:var(--muted); line-height:1.4; font-weight:400; }
+
+/* ticker removed */
+.ticker-sep { color:var(--border2); font-size:16px; }
+
+/* ─── CARDS ─── */
+.card-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1.25rem; }
+.card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); padding:1.85rem;
+  transition:transform .32s cubic-bezier(.175,.885,.32,1.275),
+             box-shadow .32s cubic-bezier(.175,.885,.32,1.275),
+             border-color .32s;
+  position:relative; overflow:hidden;
+  will-change: transform;
+}
+.card::after {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, var(--fv), var(--teal));
+  transform:scaleX(0); transform-origin:left;
+  transition:transform .35s cubic-bezier(.4,0,.2,1);
+}
+.card:hover { box-shadow:var(--shadow-card-hover); border-color:rgba(22,163,74,.2); }
+.card:hover::after { transform:scaleX(1); }
+
+/* Premium SVG icon container */
+.card-icon {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  background: var(--forest-l);
+  border: 1px solid rgba(22,163,74,.16);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 1.2rem;
+  transition: all .32s cubic-bezier(.175,.885,.32,1.275);
+  position: relative;
+}
+.card-icon svg {
+  width: 22px; height: 22px;
+  color: var(--forest);
+  transition: transform .32s cubic-bezier(.175,.885,.32,1.275);
+}
+.card:hover .card-icon {
+  background: linear-gradient(135deg, rgba(22,163,74,.16), rgba(22,163,74,.06));
+  box-shadow: 0 0 0 6px rgba(22,163,74,.07);
+  transform: translateY(-2px);
+}
+.card:hover .card-icon svg { transform: scale(1.15) rotate(-8deg); }
+.card h3 { font-family:var(--serif); font-size:18px; color:var(--text); margin-bottom:.5rem; letter-spacing:-.015em; }
+.card p  { font-size:13.5px; color:var(--text2); line-height:1.82; text-align:justify; }
+
+/* ─── STAT BLOCKS ─── */
+.stat-block {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); padding:1.35rem 1.6rem;
+  border-left:2.5px solid var(--fv);
+  transition:all .26s cubic-bezier(.4,0,.2,1);
+  position:relative; overflow:hidden;
+}
+.stat-block::before { content:''; position:absolute; inset:0; background:linear-gradient(90deg,var(--forest-d),transparent); }
+.stat-block:hover { transform:translateX(5px); box-shadow:var(--shadow-sm); border-left-color:var(--forest); }
+.stat-block.ocean { border-left-color:var(--ocean); }
+.stat-block.ocean::before { background:linear-gradient(90deg,rgba(29,78,216,.03),transparent); }
+.stat-block.rust { border-left-color:var(--rust); }
+.stat-block.rust::before { background:linear-gradient(90deg,rgba(194,65,12,.03),transparent); }
+.stat-block.teal { border-left-color:var(--teal); }
+.stat-block.teal::before { background:linear-gradient(90deg,rgba(15,118,110,.03),transparent); }
+.stat-block .sbn { font-family:var(--serif); font-size:22px; font-weight:600; color:var(--text); margin-bottom:3px; }
+.stat-block .sbl { font-size:12.5px; color:var(--text2); line-height:1.55; }
+.stat-block .sbs { font-size:11px; color:var(--muted); margin-top:5px; font-style:italic; }
+
+/* ─── TWO-COL ─── */
+.two-col      { display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin-bottom:2.5rem; }
+.two-col-wide { display:grid; grid-template-columns:1.1fr .9fr; gap:2.5rem; margin-bottom:2.5rem; }
+
+/* ─── INFOBOX ─── */
+.infobox {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); padding:2rem; margin-bottom:1.5rem;
+  transition:all .26s;
+}
+.infobox:hover { box-shadow:var(--shadow-sm); }
+.infobox-title {
+  font-family:var(--sans); font-size:11px; font-weight:700;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--teal);
+  padding-bottom:.75rem; margin-bottom:1.25rem; border-bottom:1px solid var(--border);
+}
+.infobox-title.forest { color:var(--forest); }
+.infobox-title.ocean  { color:var(--ocean); }
+.infobox-title.rust   { color:var(--rust); }
+
+/* ─── ITEM ROWS ─── */
+.irow { display:flex; gap:11px; margin-bottom:.9rem; align-items:flex-start; }
+.irow:last-child { margin-bottom:0; }
+.inum {
+  font-family:var(--sans); font-size:11px; font-weight:700;
+  color:var(--fv); background:var(--forest-l);
+  width:22px; height:22px; border-radius:5px;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; margin-top:2px; border:1px solid rgba(22,163,74,.2);
+}
+.inum.ocean { color:var(--ocean); background:var(--ocean-l); border-color:rgba(29,78,216,.2); }
+.inum.teal  { color:var(--teal);  background:var(--teal-l);  border-color:rgba(15,118,110,.2); }
+.irow p  { font-size:13.5px; color:var(--text2); line-height:1.7; }
+.idot { width:6px; height:6px; border-radius:50%; background:var(--fv); flex-shrink:0; margin-top:9px; }
+.idot.teal  { background:var(--teal); }
+.idot.ocean { background:var(--ocean); }
+.idot.rust  { background:var(--rust); }
+
+/* ─── TAGS ─── */
+.tag { display:inline-block; font-family:var(--sans); font-size:11px; font-weight:600; padding:4px 10px; border-radius:5px; letter-spacing:.01em; }
+.tag-f { background:var(--forest-l); color:var(--forest); border:1px solid rgba(22,163,74,.2); }
+.tag-t { background:var(--teal-l);   color:var(--teal);   border:1px solid rgba(15,118,110,.2); }
+.tag-o { background:var(--ocean-l);  color:var(--ocean);  border:1px solid rgba(29,78,216,.2); }
+.tag-m { background:var(--surface2); color:var(--muted);  border:1px solid var(--border); }
+.tag-r { background:var(--rust-l);   color:var(--rust);   border:1px solid rgba(194,65,12,.2); }
+
+/* ─── DATA TABLE ─── */
+.dtable-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-card); overflow:hidden; margin-bottom:1.5rem; box-shadow:var(--shadow-xs); }
+.dtable-head { display:grid; grid-template-columns:64px 1.1fr 1.4fr 1fr .7fr; padding:.75rem 1.5rem; background:var(--surface2); font-family:var(--sans); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); gap:1rem; }
+.drow { display:grid; grid-template-columns:64px 1.1fr 1.4fr 1fr .7fr; padding:.85rem 1.5rem; border-bottom:1px solid var(--border); font-size:13px; gap:1rem; align-items:center; transition:background .18s; }
+.drow:last-child { border-bottom:none; }
+.drow:hover { background:var(--surface2); }
+.drow.iklim { background:rgba(15,118,110,.03); }
+.drow.iklim:hover { background:rgba(15,118,110,.07); }
+.var-code { font-family:var(--sans); font-size:11px; font-weight:700; color:var(--forest); background:var(--forest-l); padding:3px 8px; border-radius:4px; width:fit-content; border:1px solid rgba(22,163,74,.15); }
+.var-code.teal { color:var(--teal); background:var(--teal-l); border-color:rgba(15,118,110,.15); }
+.var-name { color:var(--text); font-weight:500; font-size:13px; }
+.var-name.teal { color:var(--teal); }
+.var-desc { color:var(--text2); font-size:12.5px; }
+.var-src  { color:var(--muted); font-size:12px; }
+
+/* ─── COMPARISON TABLE ─── */
+.ctable-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-card); overflow:hidden; margin-bottom:1.5rem; box-shadow:var(--shadow-xs); }
+.ctable-head { display:grid; gap:1rem; padding:.75rem 1.5rem; background:var(--surface2); font-family:var(--sans); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); }
+.ctable-head.c4 { grid-template-columns:1.5fr .9fr .9fr 1.3fr; }
+.ctable-head.c3 { grid-template-columns:1.5fr 1fr 1.5fr; }
+.crow { display:grid; gap:1rem; padding:.9rem 1.5rem; border-bottom:1px solid var(--border); font-size:13px; align-items:center; transition:background .18s; }
+.crow:last-child { border-bottom:none; }
+.crow:hover { background:var(--surface2); }
+.crow.c4 { grid-template-columns:1.5fr .9fr .9fr 1.3fr; }
+.crow.c3 { grid-template-columns:1.5fr 1fr 1.5fr; }
+.crow.winner { background:var(--forest-l); }
+.crow.winner:hover { background:var(--forest-m); }
+.crow.winner .cn { color:var(--forest); }
+.crow .cn { font-weight:500; color:var(--text); }
+.crow .cm { font-size:12.5px; color:var(--text2); font-weight:500; }
+.crow .cd { font-size:12.5px; color:var(--text2); }
+
+/* ─── METHOD CARDS ─── */
+.method-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.25rem; margin-bottom:2rem; }
+.mcard {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); padding:1.85rem;
+  position:relative; overflow:hidden;
+  transition:transform .32s cubic-bezier(.175,.885,.32,1.275),
+             box-shadow .32s,border-color .32s;
+  will-change:transform;
+}
+.mcard::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--fv),rgba(22,163,74,.2)); transform:scaleX(0); transition:transform .38s cubic-bezier(.4,0,.2,1); transform-origin:left; }
+.mcard.teal::after  { background:linear-gradient(90deg,var(--teal),rgba(15,118,110,.2)); }
+.mcard.ocean::after { background:linear-gradient(90deg,var(--ocean),rgba(29,78,216,.2)); }
+.mcard:hover::after { transform:scaleX(1); }
+.mcard:hover { box-shadow:var(--shadow-card-hover); border-color:rgba(22,163,74,.2); }
+.mcard.teal:hover  { border-color:rgba(15,118,110,.2); }
+.mcard.ocean:hover { border-color:rgba(29,78,216,.2); }
+.mc-num { font-family:var(--serif); font-size:56px; color:rgba(0,0,0,.03); position:absolute; top:.4rem; right:1rem; line-height:1; pointer-events:none; font-weight:700; }
+.mc-tag { font-family:var(--sans); font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--fv); margin-bottom:.75rem; }
+.mcard.teal .mc-tag  { color:var(--teal); }
+.mcard.ocean .mc-tag { color:var(--ocean); }
+.mcard h3 { font-family:var(--serif); font-size:18px; color:var(--text); margin-bottom:.7rem; line-height:1.3; letter-spacing:-.015em; }
+.mcard p  { font-size:13px; color:var(--text2); line-height:1.8; }
+.mc-badge { display:inline-block; margin-top:1rem; font-family:var(--sans); font-size:11px; font-weight:600; padding:4px 10px; border-radius:5px; background:var(--surface2); color:var(--muted); border:1px solid var(--border); }
+
+/* ─── FINDINGS ─── */
+.fb { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-card); padding:2rem; transition:all .26s; }
+.fb:hover { box-shadow:var(--shadow-sm); }
+.fb h3 { font-family:var(--serif); font-size:20px; color:var(--text); margin-bottom:1.25rem; padding-bottom:.75rem; border-bottom:1px solid var(--border); letter-spacing:-.015em; }
+
+/* ─── DASHBOARD ─── */
+.dash-header { background:var(--surface); border-bottom:1px solid var(--border); padding:2rem 2.5rem; }
+.dash-header-inner { max-width:1620px; margin:0 auto; }
+.dash-header h2 { font-family:var(--serif); font-size:28px; color:var(--text); margin-bottom:4px; letter-spacing:-.025em; }
+.dash-header p { font-size:13.5px; color:var(--muted); }
+.dash-tag-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:.75rem; }
+.dtag { font-family:var(--sans); font-size:11px; font-weight:600; padding:5px 11px; border-radius:5px; letter-spacing:.01em; transition:transform .2s; }
+.dtag:hover { transform:translateY(-1px); }
+.dtag-g { background:var(--forest-l); color:var(--forest); border:1px solid rgba(22,163,74,.2); }
+.dtag-t { background:var(--teal-l);   color:var(--teal);   border:1px solid rgba(15,118,110,.2); }
+.dtag-m { background:var(--surface2); color:var(--muted);  border:1px solid var(--border); }
+.dash-body { max-width:1620px; margin:0 auto; padding:2rem 2.5rem; }
+.viz-shell { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-card); overflow:hidden; box-shadow:var(--shadow-sm); }
+.viz-header { padding:16px 20px; background:var(--surface2); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.vdots { display:flex; gap:6px; }
+.vd { width:11px; height:11px; border-radius:50%; }
 .vd-r{background:#FF5F57;}.vd-y{background:#FEBC2E;}.vd-g{background:#28C840;}
-.vtl{font-family:var(--sans);font-size:12px;font-weight:600;color:var(--text);}
-.vhint{font-family:var(--sans);font-size:12px;color:var(--muted);}
-.tableau-wrap{width:100%;height:800px;position:relative;background:#fff;}
-.tableauPlaceholder{width:100%!important;height:800px!important;border:none;display:block;}
+.vtl   { font-family:var(--sans); font-size:12px; font-weight:600; color:var(--text); }
+.vhint { font-family:var(--sans); font-size:12px; color:var(--muted); }
+.tableau-wrap { width:100%; height:800px; position:relative; background:#fff; }
+.tableauPlaceholder { width:100%!important; height:800px!important; border:none; display:block; }
 
-/* ── PERSON CARD ── */
-.person-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.75rem;}
-.pc-role{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--forest);margin-bottom:.5rem;}
-.pc-name{font-family:var(--serif);font-size:22px;color:var(--text);margin-bottom:.25rem;}
-.pc-sub{font-size:13px;color:var(--muted);margin-bottom:1.1rem;}
-.person-card p{font-size:13.5px;color:var(--text2);line-height:1.75;text-align:justify;}
-.info-pair{display:grid;grid-template-columns:150px 1fr;gap:.5rem 1rem;margin-bottom:.6rem;font-size:13.5px;}
-.info-pair:last-child{margin-bottom:0;}
-.info-key{color:var(--muted);font-size:13px;}
-.info-val{color:var(--text2);}
+/* ─── PERSON CARD ─── */
+.person-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); padding:1.85rem;
+  transition:all .26s cubic-bezier(.4,0,.2,1);
+}
+.person-card:hover { box-shadow:var(--shadow-card); transform:translateY(-2px); border-color:rgba(22,163,74,.2); }
+.pc-role { font-family:var(--sans); font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--fv); margin-bottom:.5rem; }
+.pc-name { font-family:var(--serif); font-size:22px; color:var(--text); margin-bottom:.25rem; letter-spacing:-.015em; }
+.pc-sub  { font-size:13px; color:var(--muted); margin-bottom:1.1rem; }
+.person-card p { font-size:13.5px; color:var(--text2); line-height:1.75; text-align:justify; }
+.info-pair { display:grid; grid-template-columns:150px 1fr; gap:.5rem 1rem; margin-bottom:.6rem; font-size:13.5px; }
+.info-pair:last-child { margin-bottom:0; }
+.info-key { color:var(--muted); font-size:13px; }
+.info-val { color:var(--text2); }
 
-/* ── ACCORDION ── */
-.acc-section{display:none;overflow:hidden;}
-.acc-section.open{display:block;animation:pgin .3s ease-out;}
-.subnav-pill.open{color:var(--forest);border-color:rgba(45,80,22,.3);background:var(--forest-l);font-weight:600;}
-.pill-arrow{font-size:10px;margin-left:4px;display:inline-block;transition:transform .25s;}
-.subnav-pill.open .pill-arrow{transform:rotate(180deg);}
+/* ─── ACCORDION ─── */
+.acc-section { display:none; overflow:hidden; }
+.acc-section.open { display:block; animation:pgin .4s cubic-bezier(.4,0,.2,1); }
+.pill-arrow { font-size:10px; margin-left:4px; display:inline-block; transition:transform .28s cubic-bezier(.4,0,.2,1); }
+.subnav-pill.open .pill-arrow { transform:rotate(180deg); }
 
-/* ── REVEAL ── */
-.rv{opacity:0;transform:translateY(16px);transition:opacity .48s ease,transform .48s ease;}
-.rv.vis{opacity:1;transform:translateY(0);}
+/* ─── REVEAL ─── */
+.rv { opacity:0; transform:translateY(22px); transition:opacity .6s cubic-bezier(.4,0,.2,1),transform .6s cubic-bezier(.4,0,.2,1); }
+.rv.vis { opacity:1; transform:translateY(0); }
+.rv:nth-child(2){transition-delay:.09s;}
+.rv:nth-child(3){transition-delay:.18s;}
+.rv:nth-child(4){transition-delay:.27s;}
 
-/* ── LANG SWITCH ── */
-[data-en],[data-id]{transition:opacity .15s;}
+/* ─── LANG ─── */
+[data-en],[data-id]{transition:opacity .2s;}
 body.lang-id [data-en]{display:none;}
 body.lang-en [data-id]{display:none;}
 
-/* ── FOOTER ── */
-footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);text-align:center;font-size:12.5px;color:var(--muted);}
+/* ─── FOOTER ─── */
+footer {
+  margin-top:3rem; padding:2.5rem 2.5rem;
+  border-top:1px solid var(--border);
+  text-align:center; font-size:12.5px; color:var(--muted);
+  background:var(--surface); position:relative; z-index:2;
+}
+footer::before {
+  content:''; position:absolute; top:0; left:50%;
+  transform:translateX(-50%); width:100px; height:1.5px;
+  background:linear-gradient(90deg,transparent,var(--fv),transparent);
+}
 
-/* ── MOBILE ── */
+/* ─── SECTION BAND ─── */
+.section-band {
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  position:relative; z-index:2;
+}
+.section-band::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1.5px;
+  background:linear-gradient(90deg,transparent,rgba(22,163,74,.35),transparent);
+}
+
+/* ─── MOBILE ─── */
 @media(max-width:900px){
   .nav-inner{gap:.75rem;padding:0 1rem;}
   .nav-divider{display:none;}
@@ -246,8 +678,8 @@ footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);te
   .nav-cta{padding:7px 12px;font-size:12px;}
   .container{padding:3rem 1.5rem;}
   .hero{padding:3rem 1.5rem 2.5rem;}
-  .hero-title{font-size:2.4rem;}
-  .two-col,.two-col-wide,.method-grid{grid-template-columns:1fr;}
+  .hero-title{font-size:2.2rem;}
+  .two-col,.two-col-wide,.method-grid,.card-grid{grid-template-columns:1fr;}
   .hero-stats{grid-template-columns:repeat(2,1fr);}
   .hstat:nth-child(2){border-right:none;}
   .hstat:nth-child(3){border-top:1px solid var(--border);}
@@ -258,10 +690,284 @@ footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);te
   .dash-header,.dash-body{padding-left:1.5rem;padding-right:1.5rem;}
   .tableau-wrap{height:auto;}
   .tableauPlaceholder{height:2077px!important;}
+  .cursor-glow{display:none;}
+
 }
+
+/* ════════════════════════════════════════════
+   SIECCI v5 — Colorful · Cheerful · Alive
+   ────────────────────────────────────────── */
+
+/* ── COLOR PALETTE EXPANSION ── */
+:root {
+  --purple:   #7C3AED;
+  --purple-l: rgba(124,58,237,.09);
+  --amber:    #D97706;
+  --amber-l:  rgba(217,119,6,.09);
+}
+
+/* ── TITLE: Highlighter-pill effect (no italic, no underline) ── */
+.accent-energy {
+  color: #166534 !important;
+  font-style: normal !important;
+  font-weight: 700;
+  display: inline-block;
+  position: relative;
+}
+.accent-energy::before {
+  content: '';
+  position: absolute;
+  top: 8%; bottom: 8%; left: -5px; right: -5px;
+  background: rgba(22,163,74,.15);
+  border-radius: 6px;
+  z-index: -1;
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: pillReveal .6s .82s cubic-bezier(.4,0,.2,1) forwards;
+}
+.accent-energy::after { display: none !important; }
+
+.accent-climate {
+  color: #1e40af !important;
+  font-style: normal !important;
+  font-weight: 700;
+  display: inline-block;
+  position: relative;
+}
+.accent-climate::before {
+  content: '';
+  position: absolute;
+  inset: -2px -2px;
+  background: rgba(29,78,216,.12);
+  border-radius: 8px;
+  z-index: -1;
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: pillReveal .6s 1.08s cubic-bezier(.4,0,.2,1) forwards;
+}
+.accent-climate::after { display: none !important; }
+
+@keyframes pillReveal {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* ── HERO EYEBROW — floating + gradient border ── */
+.hero-eyebrow {
+  background: linear-gradient(var(--bg),var(--bg)) padding-box,
+              linear-gradient(135deg,#16A34A,#2563EB,#0F766E) border-box !important;
+  border: 1.5px solid transparent !important;
+  color: #166534 !important;
+  animation: fadeUp .6s .1s both, floatBadge 3.5s 1s ease-in-out infinite !important;
+}
+@keyframes floatBadge {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-4px); }
+}
+
+/* ── HERO ORB: add orange for color variety ── */
+.hero-orb-2 {
+  background: radial-gradient(circle,rgba(194,65,12,.07),transparent 70%) !important;
+}
+.hero-orb-3 {
+  background: radial-gradient(circle,rgba(29,78,216,.08),transparent 70%) !important;
+}
+
+/* ── HERO STATS: every stat its own color ── */
+.hstat:nth-child(1) .hstat-n { color: #16A34A; }
+.hstat:nth-child(2) .hstat-n { color: #2563EB; }
+.hstat:nth-child(3) .hstat-n { color: #C2410C; }
+.hstat:nth-child(4) .hstat-n { color: #0F766E; }
+
+.hstat:nth-child(1):hover { background: rgba(22,163,74,.07) !important; }
+.hstat:nth-child(2):hover { background: rgba(37,99,235,.07) !important; }
+.hstat:nth-child(3):hover { background: rgba(194,65,12,.07) !important; }
+.hstat:nth-child(4):hover { background: rgba(15,118,110,.07) !important; }
+
+/* ── CARD COLOR VARIANTS — 4 distinct colors ── */
+/* Energy — Green */
+.card-energy .card-icon { background:rgba(22,163,74,.12)!important; border-color:rgba(22,163,74,.22)!important; }
+.card-energy .card-icon svg { color:#16A34A !important; }
+.card-energy::after { background:linear-gradient(90deg,#16A34A,#0F766E)!important; }
+.card-energy:hover { border-color:rgba(22,163,74,.28)!important; box-shadow:0 16px 56px rgba(22,163,74,.1),0 4px 16px rgba(0,0,0,.06)!important; }
+
+/* Climate — Teal-Blue */
+.card-climate .card-icon { background:rgba(15,118,110,.12)!important; border-color:rgba(15,118,110,.22)!important; }
+.card-climate .card-icon svg { color:#0F766E !important; }
+.card-climate::after { background:linear-gradient(90deg,#0F766E,#2563EB)!important; }
+.card-climate:hover { border-color:rgba(15,118,110,.28)!important; box-shadow:0 16px 56px rgba(15,118,110,.1),0 4px 16px rgba(0,0,0,.06)!important; }
+
+/* Causality — Orange */
+.card-causality .card-icon { background:rgba(194,65,12,.12)!important; border-color:rgba(194,65,12,.22)!important; }
+.card-causality .card-icon svg { color:#C2410C !important; }
+.card-causality::after { background:linear-gradient(90deg,#C2410C,#EA580C)!important; }
+.card-causality:hover { border-color:rgba(194,65,12,.28)!important; box-shadow:0 16px 56px rgba(194,65,12,.1),0 4px 16px rgba(0,0,0,.06)!important; }
+
+/* Forecast — Blue-Purple */
+.card-forecast .card-icon { background:rgba(37,99,235,.12)!important; border-color:rgba(37,99,235,.22)!important; }
+.card-forecast .card-icon svg { color:#2563EB !important; }
+.card-forecast::after { background:linear-gradient(90deg,#2563EB,#7C3AED)!important; }
+.card-forecast:hover { border-color:rgba(37,99,235,.28)!important; box-shadow:0 16px 56px rgba(37,99,235,.1),0 4px 16px rgba(0,0,0,.06)!important; }
+
+/* ── NAV CTA: gradient ── */
+.nav-cta {
+  background: linear-gradient(135deg,#1A6B3C,#2563EB) !important;
+  box-shadow: 0 4px 16px rgba(26,107,60,.22), 0 4px 16px rgba(37,99,235,.18) !important;
+}
+.nav-cta:hover {
+  background: linear-gradient(135deg,#155e34,#1a44c4) !important;
+  box-shadow: 0 8px 32px rgba(26,107,60,.28), 0 8px 32px rgba(37,99,235,.22) !important;
+}
+
+/* ── SDG PILLS: more vibrant ── */
+.sdg-7 { background:rgba(217,119,6,.13)!important; color:#92400E!important; border-color:rgba(217,119,6,.32)!important; font-weight:600!important; }
+.sdg-13 { background:rgba(22,163,74,.13)!important; color:#166534!important; border-color:rgba(22,163,74,.32)!important; font-weight:600!important; }
+
+/* ── SECTION LABEL: more colorful per section ── */
+.section-label { letter-spacing:.16em; }
+#page-home .section-band .section-label { color:#2563EB; }
+#page-home .section-band .section-label::before { background:#2563EB; }
+#page-home .section-band .section-label::after  { background:#2563EB; animation-name:labelDotBlue; }
+@keyframes labelDotBlue { 0%,100%{opacity:1;}50%{opacity:.3;} }
+
+/* ── SECTION BAND: subtle color gradient ── */
+.section-band {
+  background: #FFFFFF !important;
+}
+.section-band::before {
+  background: linear-gradient(90deg,transparent,rgba(37,99,235,.28),rgba(22,163,74,.22),transparent) !important;
+}
+
+
+
+/* ── FOOTER GRADIENT LINE ── */
+footer::before {
+  background: linear-gradient(90deg,transparent,#16A34A,#2563EB,transparent) !important;
+  width: 200px !important;
+}
+
+/* ── LOADER: gradient ── */
+.loader-mark {
+  background: linear-gradient(135deg,#1A6B3C,#2563EB) !important;
+  box-shadow: 0 0 0 0 rgba(22,163,74,.4) !important;
+}
+
+/* ── HERO STATS BORDER BOTTOM: colored bars ── */
+.hstat { position: relative; }
+.hstat::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 16px; right: 16px;
+  height: 2px; border-radius: 2px;
+  opacity: 0; transition: opacity .25s;
+}
+.hstat:hover::after { opacity: 1; }
+.hstat:nth-child(1)::after { background: #16A34A; }
+.hstat:nth-child(2)::after { background: #2563EB; }
+.hstat:nth-child(3)::after { background: #C2410C; }
+.hstat:nth-child(4)::after { background: #0F766E; }
+
+/* ── CARDS: subtle colorful bg on hover ── */
+.card-energy   .card-icon:hover,
+.card-climate  .card-icon:hover,
+.card-causality .card-icon:hover,
+.card-forecast .card-icon:hover { transform: scale(1.12) rotate(-8deg); }
+
+/* ── BOUNCE animation on section headings ── */
+.section-title { animation: none; }
+
+
+.hero-orb-4 { width:350px; height:350px; background:radial-gradient(circle,rgba(124,58,237,.055),transparent 70%); bottom:25%; left:20%; animation-delay:-2s; }
+
+
+/* ═══ V6 — Neutral text & clean background ═══ */
+
+/* Body text strictly neutral dark */
+.card p, .mcard p, .section-lead,
+.irow p, .stat-block .sbl,
+.var-desc, .crow .cd, .person-card p { color: #374151 !important; }
+
+/* Muted labels neutral gray */
+.hstat-l, .stat-block .sbs, .var-src,
+.sdg-note, .vhint, .dash-header p,
+.loader-text { color: #6B7280 !important; }
+
+/* Infobox body text neutral */
+.infobox p, .fb p, .fb li { color: #374151 !important; }
+
+/* Stat numbers keep their accent colors (already set per-child) */
+
+/* About page: background truly white, not green-tinted */
+#page-about { background: #FAFAF8; }
+#page-dashboard { background: #FAFAF8; }
+
+/* Surface2 used in nav, table headers — truly neutral */
+.nav-inner { background: transparent; }
+.dtable-head, .ctable-head { background: #F9FAFB !important; }
+.drow:hover, .crow:hover { background: #F9FAFB !important; }
+
+/* Remove green tint from surface2 */
+.nt:hover { background: #F3F4F6 !important; }
+.nt.active { background: rgba(22,163,74,.09) !important; }
+
+/* Loader bg neutral */
+#loader { background: #FAFAF8 !important; }
+
+/* Section band border neutral + subtle */
+.section-band::before {
+  background: linear-gradient(90deg,transparent,rgba(22,163,74,.25),rgba(37,99,235,.2),transparent) !important;
+}
+
+/* Subnav pills neutral */
+.subnav-pill { background: #FFFFFF !important; }
+.subnav-pill:hover { background: rgba(22,163,74,.09) !important; }
+
+/* Card background neutral white, not green-tinted */
+.card, .mcard, .infobox, .fb, .person-card,
+.stat-block, .dtable-wrap, .ctable-wrap,
+.viz-shell, .dash-header, .hero-stats { background: #FFFFFF !important; }
+
+
+/* ═══ V7 — Stabilo OFF, JS color-reveal ON ═══ */
+.accent-energy::before, .accent-energy::after,
+.accent-climate::before, .accent-climate::after {
+  display: none !important;
+  content: none !important;
+  animation: none !important;
+}
+.accent-energy, .accent-climate {
+  padding: 0 !important;
+  position: static !important;
+  font-style: normal !important;
+  display: inline !important;
+  background: none !important;
+}
+
 </style>
 </head>
 <body class="lang-en">
+
+<!-- ── LOADER ── -->
+<div id="scroll-progress"></div>
+
+<div id="loader">
+  <div class="loader-mark">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M12 2L2 9.5V22h8v-6h4v6h8V9.5z"/></svg>
+  </div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+  <div class="loader-text">SIECCI · Loading</div>
+</div>
+
+<!-- ── CURSOR GLOW ── -->
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<!-- ── HERO BACKGROUND ORBS ── -->
+<div class="hero-bg">
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
+  <div class="hero-orb hero-orb-3"></div>
+  <div class="hero-orb hero-orb-4"></div>
+</div>
 
 <!-- ══ TOP NAV ══ -->
 <nav id="topnav">
@@ -298,14 +1004,14 @@ footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);te
 ══════════════════════════════════════ -->
 <div id="page-home" class="page active">
   <div class="hero">
-    <div class="hero-eyebrow">🇮🇩 <span data-en>Final Project · PENS 2025</span><span data-id>Proyek Akhir · PENS 2025</span></div>
+    <div class="hero-eyebrow">🇮🇩 <span data-en>Final Project · PENS 2026</span><span data-id>Proyek Akhir · PENS 2026</span></div>
     <h1 class="hero-title">
-      <span data-en>Predictive Modeling &amp; Causality of<br><em>Energy Consumption</em> toward<br>Climate Change in Indonesia</span>
-      <span data-id>Pemodelan Prediktif &amp; Kausalitas<br><em>Konsumsi Energi</em> terhadap<br>Perubahan Iklim Indonesia</span>
+      <span data-en>Predictive Modeling &amp; Causality of<br><em class="accent-energy">Energy Consumption</em> toward<br><em class="accent-climate">Climate Change</em> in Indonesia</span>
+      <span data-id>Pemodelan Prediktif &amp; Kausalitas<br><em class="accent-energy">Konsumsi Energi</em> terhadap<br><em class="accent-climate">Perubahan Iklim</em> Indonesia</span>
     </h1>
     <p class="hero-subtitle">
-      <span data-en>Using Bayesian Vector Autoregression (BVAR), Sequence-to-Sequence LSTM, Granger Causality Test and Transfer Entropy — presented through the interactive SIECCI dashboard powered by Tableau.</span>
-      <span data-id>Menggunakan Bayesian Vector Autoregression (BVAR), Sequence-to-Sequence LSTM, serta Uji Kausalitas Granger dan Transfer Entropy — disajikan melalui dashboard interaktif SIECCI berbasis Tableau.</span>
+      <span data-en>Using Bayesian Vector Autoregression (BVAR), Sequence-to-Sequence LSTM, and Holt's Method for forecasting; Granger Causality Test and Transfer Entropy for causality analysis — presented through the interactive SIECCI dashboard powered by Tableau.</span>
+      <span data-id>Menggunakan Bayesian Vector Autoregression (BVAR), Sequence-to-Sequence LSTM, dan Holt's Method untuk peramalan; serta Uji Kausalitas Granger dan Transfer Entropy untuk analisis kausalitas — disajikan melalui dashboard interaktif SIECCI berbasis Tableau.</span>
     </p>
     <div class="hero-actions">
       <button class="btn-primary" onclick="sp('dashboard')">
@@ -330,7 +1036,8 @@ footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);te
     </div>
   </div>
 
-  <div style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+
+  <div class="section-band">
     <div class="container">
       <div class="section-label"><span data-en>Analytics Platform</span><span data-id>Platform Analitik</span></div>
       <h2 class="section-title"><span data-en>About the SIECCI Dashboard</span><span data-id>Tentang Dashboard SIECCI</span></h2>
@@ -339,25 +1046,25 @@ footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);te
         <span data-id>SIECCI (System for Indonesian Energy Consumption &amp; Climate Change Intelligence) adalah dashboard analitik interaktif berbasis Tableau yang menyajikan hasil pemodelan prediktif multivariat dan analisis kausalitas antara konsumsi energi dan perubahan iklim di Indonesia secara terpadu.</span>
       </p>
       <div class="card-grid rv">
-        <div class="card">
-          <div class="card-icon">⚡</div>
+        <div class="card card-energy">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
           <h3><span data-en>Energy Consumption</span><span data-id>Konsumsi Energi</span></h3>
           <p><span data-en>Explore energy consumption trends across industry, residential, and commercial sectors from 1990 to 2023, with 7-year forecasts using the best-performing models.</span><span data-id>Eksplorasi tren konsumsi energi sektor industri, rumah tangga, dan komersial dari 1990 hingga 2023, beserta proyeksi 7 tahun ke depan menggunakan model terbaik hasil komparasi.</span></p>
         </div>
-        <div class="card">
-          <div class="card-icon">🌡️</div>
+        <div class="card card-climate">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/><line x1="8.5" y1="8" x2="11.5" y2="8"/><line x1="8.5" y1="11" x2="11.5" y2="11"/></svg></div>
           <h3><span data-en>Climate Change</span><span data-id>Perubahan Iklim</span></h3>
           <p><span data-en>Analysis of CO₂ emissions, Greenhouse Gas (GHG) emissions, and annual surface temperature anomalies in Indonesia — directly linked to energy consumption patterns via causality analysis.</span><span data-id>Analisis emisi CO₂, Gas Rumah Kaca (GRK), dan anomali suhu permukaan tahunan Indonesia — dikaitkan langsung dengan pola konsumsi energi melalui analisis kausalitas.</span></p>
         </div>
-        <div class="card">
-          <div class="card-icon">🔗</div>
-          <h3><span data-en>Causality Analysis</span><span data-id>Analisis Kausalitas</span></h3>
-          <p><span data-en>Identifying causal relationships using Granger Causality (linear) and Transfer Entropy (nonlinear), uncovering complex dynamics between energy and climate.</span><span data-id>Identifikasi hubungan sebab-akibat menggunakan Uji Granger (linier) dan Transfer Entropy (non-linier), mengungkap dinamika kompleks antara energi dan iklim.</span></p>
-        </div>
-        <div class="card">
-          <div class="card-icon">📈</div>
+        <div class="card card-forecast">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg></div>
           <h3><span data-en>Integrated Forecasting</span><span data-id>Peramalan Terpadu</span></h3>
           <p><span data-en>Projections of energy consumption and climate indicators presented in one interactive visualization platform, accessible to a wide range of users.</span><span data-id>Proyeksi konsumsi energi dan indikator iklim disajikan dalam satu platform visualisasi interaktif yang mudah dioperasikan oleh berbagai kalangan pengguna.</span></p>
+        </div>
+        <div class="card card-causality">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="8.7" y1="10.7" x2="15.3" y2="7.3"/><line x1="8.7" y1="13.3" x2="15.3" y2="16.7"/></svg></div>
+          <h3><span data-en>Causality Analysis</span><span data-id>Analisis Kausalitas</span></h3>
+          <p><span data-en>Identifying causal relationships using Granger Causality (linear) and Transfer Entropy (nonlinear), uncovering complex dynamics between energy and climate.</span><span data-id>Identifikasi hubungan sebab-akibat menggunakan Uji Granger (linier) dan Transfer Entropy (non-linier), mengungkap dinamika kompleks antara energi dan iklim.</span></p>
         </div>
       </div>
     </div>
@@ -452,11 +1159,11 @@ footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);te
         <div class="infobox-title"><span data-en>Project Information</span><span data-id>Informasi Proyek</span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
           <div>
-            <div class="info-pair"><span class="info-key"><span data-en>Title</span><span data-id>Judul</span></span><span class="info-val"><span data-en>Multivariate Predictive Modeling and Causality of Energy Consumption toward Climate Change in Indonesia</span><span data-id>Pemodelan Prediktif Multivariat dan Kausalitas Konsumsi Energi Terhadap Perubahan Iklim di Indonesia</span></span></div>
+            <div class="info-pair"><span class="info-key"><span data-en>Title</span><span data-id>Judul</span></span><span class="info-val"><span data-en>Multivariate Predictive Modeling and Causality of Energy Consumption toward Climate Change in Indonesia Using Bayesian Vector Autoregression and Sequence-to-Sequence</span><span data-id>Pemodelan Prediktif Multivariat dan Kausalitas Konsumsi Energi Terhadap Perubahan Iklim di Indonesia Menggunakan Bayesian Vector Autoregression dan Sequence-to-Sequence</span></span></div>
             <div class="info-pair"><span class="info-key"><span data-en>Study Program</span><span data-id>Program Studi</span></span><span class="info-val">D4 Applied Data Science</span></div>
             <div class="info-pair"><span class="info-key"><span data-en>Department</span><span data-id>Jurusan</span></span><span class="info-val">Informatics &amp; Computer Engineering</span></div>
             <div class="info-pair"><span class="info-key"><span data-en>Institution</span><span data-id>Institusi</span></span><span class="info-val">Politeknik Elektronika Negeri Surabaya (PENS)</span></div>
-            <div class="info-pair"><span class="info-key"><span data-en>Year</span><span data-id>Tahun</span></span><span class="info-val">2025</span></div>
+            <div class="info-pair"><span class="info-key"><span data-en>Year</span><span data-id>Tahun</span></span><span class="info-val">2026</span></div>
           </div>
           <div>
             <div class="info-pair"><span class="info-key"><span data-en>Main Methods</span><span data-id>Metode Utama</span></span><span class="info-val">BVAR, Seq2Seq LSTM, Holt's Method (DES)</span></div>
@@ -467,7 +1174,7 @@ footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);te
           </div>
         </div>
       </div>
-      <div class="infobox rv" style="border-color:rgba(45,80,22,.2);background:rgba(45,80,22,.03);">
+      <div class="infobox rv" style="border-color:rgba(22,163,74,.2);background:rgba(22,163,74,.04);">
         <div class="infobox-title forest"><span data-en>About the Name SIECCI</span><span data-id>Tentang Nama SIECCI</span></div>
         <p style="font-size:14.5px;color:var(--text2);line-height:1.85;text-align:justify;">
           <span data-en><strong style="color:var(--text);">SIECCI</strong> stands for <strong style="color:var(--forest);">S</strong>ystem for <strong style="color:var(--forest);">I</strong>ndonesian <strong style="color:var(--forest);">E</strong>nergy <strong style="color:var(--forest);">C</strong>onsumption &amp; <strong style="color:var(--forest);">C</strong>limate Change <strong style="color:var(--forest);">I</strong>ntelligence — a platform that not only presents data but also provides analytical intelligence to understand the complex interactions between energy consumption and climate change in Indonesia. It serves as a strategic, <em>evidence-based</em> tool for policymakers, researchers, and the general public in supporting SDGs 7 and SDGs 13 toward a cleaner and more sustainable Indonesia.</span>
@@ -544,7 +1251,7 @@ footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);te
         </div>
         <div class="infobox" style="margin-bottom:0;">
           <div class="infobox-title"><span data-en>Research Objectives</span><span data-id>Tujuan Penelitian</span></div>
-          <div class="irow"><div class="inum teal">1</div><p><span data-en>Perform multivariate forecasting of energy consumption and climate change using BVAR and Seq2Seq LSTM across industrial, commercial, and residential sectors.</span><span data-id>Melakukan peramalan multivariat konsumsi energi dan perubahan iklim menggunakan BVAR dan Seq2Seq LSTM pada sektor industri, komersial, dan rumah tangga.</span></p></div>
+          <div class="irow"><div class="inum teal">1</div><p><span data-en>Perform multivariate forecasting of energy consumption and climate change using BVAR, Seq2Seq LSTM, and Holt's Method (DES) across industrial, commercial, and residential sectors.</span><span data-id>Melakukan peramalan multivariat konsumsi energi dan perubahan iklim menggunakan BVAR, Seq2Seq LSTM, dan Holt's Method (DES) pada sektor industri, komersial, dan rumah tangga.</span></p></div>
           <div class="irow"><div class="inum teal">2</div><p><span data-en>Analyze the causal relationships between energy consumption and climate change using Granger Causality Test and Transfer Entropy.</span><span data-id>Menganalisis hubungan kausalitas antara konsumsi energi terhadap perubahan iklim menggunakan Uji Kausalitas Granger dan Transfer Entropy.</span></p></div>
           <div class="irow"><div class="inum teal">3</div><p><span data-en>Develop an interactive analytics dashboard using Tableau as a tool for monitoring energy consumption and climate change in Indonesia.</span><span data-id>Mengembangkan dashboard analitik menggunakan Tableau sebagai alat bantu monitoring konsumsi energi dan perubahan iklim di Indonesia.</span></p></div>
         </div>
@@ -586,19 +1293,19 @@ footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);te
       </div>
       <div class="dtable-wrap rv">
         <div class="dtable-head"><span>Code</span><span>Variable</span><span><span data-en>Description</span><span data-id>Deskripsi</span></span><span><span data-en>Source</span><span data-id>Sumber</span></span><span>Unit</span></div>
-        <div class="drow"><div><span class="var-code">x1</span></div><div class="var-name">Ind_Coal</div><div class="var-desc"><span data-en>Coal &amp; coal product consumption — industrial sector</span><span data-id>Konsumsi batubara &amp; produk batubara sektor industri</span></div><div class="var-src">IEA / Our World in Data</div><div><span class="tag tag-f">TJ</span></div></div>
-        <div class="drow"><div><span class="var-code">x2</span></div><div class="var-name">Ind_Natural_gas</div><div class="var-desc"><span data-en>Natural gas consumption — industrial sector</span><span data-id>Konsumsi gas alam sektor industri</span></div><div class="var-src">IEA / Our World in Data</div><div><span class="tag tag-f">TJ</span></div></div>
-        <div class="drow"><div><span class="var-code">x3</span></div><div class="var-name">Ind_Oil</div><div class="var-desc"><span data-en>Oil &amp; oil products consumption — industrial sector</span><span data-id>Konsumsi minyak &amp; produk minyak sektor industri</span></div><div class="var-src">IEA / Our World in Data</div><div><span class="tag tag-f">TJ</span></div></div>
-        <div class="drow"><div><span class="var-code">x4</span></div><div class="var-name">Ind_Biofuels</div><div class="var-desc"><span data-en>Biofuels &amp; waste consumption — industrial sector</span><span data-id>Konsumsi biofuel &amp; limbah sektor industri</span></div><div class="var-src">IEA / Our World in Data</div><div><span class="tag tag-f">TJ</span></div></div>
-        <div class="drow"><div><span class="var-code">x5</span></div><div class="var-name">Ind_Electricity</div><div class="var-desc"><span data-en>Electricity consumption — industrial sector</span><span data-id>Konsumsi listrik sektor industri</span></div><div class="var-src">IEA / Our World in Data</div><div><span class="tag tag-f">TJ</span></div></div>
-        <div class="drow"><div><span class="var-code">x6</span></div><div class="var-name">RT_Oil</div><div class="var-desc"><span data-en>Oil consumption — residential sector</span><span data-id>Konsumsi minyak sektor rumah tangga</span></div><div class="var-src">IEA / Our World in Data</div><div><span class="tag tag-f">TJ</span></div></div>
-        <div class="drow"><div><span class="var-code">x7</span></div><div class="var-name">RT_Natural_gas</div><div class="var-desc"><span data-en>Natural gas consumption — residential sector</span><span data-id>Konsumsi gas alam sektor rumah tangga</span></div><div class="var-src">IEA / Our World in Data</div><div><span class="tag tag-f">TJ</span></div></div>
-        <div class="drow"><div><span class="var-code">x8</span></div><div class="var-name">RT_Biofuels</div><div class="var-desc"><span data-en>Biofuels &amp; waste consumption — residential sector</span><span data-id>Konsumsi biofuel &amp; limbah sektor rumah tangga</span></div><div class="var-src">IEA / Our World in Data</div><div><span class="tag tag-f">TJ</span></div></div>
-        <div class="drow"><div><span class="var-code">x9</span></div><div class="var-name">RT_Electricity</div><div class="var-desc"><span data-en>Electricity consumption — residential sector</span><span data-id>Konsumsi listrik sektor rumah tangga</span></div><div class="var-src">IEA / Our World in Data</div><div><span class="tag tag-f">TJ</span></div></div>
-        <div class="drow"><div><span class="var-code">x10</span></div><div class="var-name">Kom_Oil</div><div class="var-desc"><span data-en>Oil consumption — commercial sector</span><span data-id>Konsumsi minyak sektor komersial</span></div><div class="var-src">IEA / Our World in Data</div><div><span class="tag tag-f">TJ</span></div></div>
-        <div class="drow"><div><span class="var-code">x11</span></div><div class="var-name">Kom_Biofuels</div><div class="var-desc"><span data-en>Biofuels &amp; waste — commercial sector</span><span data-id>Konsumsi biofuel &amp; limbah sektor komersial</span></div><div class="var-src">IEA / Our World in Data</div><div><span class="tag tag-f">TJ</span></div></div>
-        <div class="drow"><div><span class="var-code">x12</span></div><div class="var-name">Kom_Natural_gas</div><div class="var-desc"><span data-en>Natural gas — commercial sector</span><span data-id>Konsumsi gas alam sektor komersial</span></div><div class="var-src">IEA / Our World in Data</div><div><span class="tag tag-f">TJ</span></div></div>
-        <div class="drow"><div><span class="var-code">x13</span></div><div class="var-name">Kom_Electricity</div><div class="var-desc"><span data-en>Electricity — commercial sector</span><span data-id>Konsumsi listrik sektor komersial</span></div><div class="var-src">IEA / Our World in Data</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x1</span></div><div class="var-name">Ind_Coal</div><div class="var-desc"><span data-en>Coal &amp; coal product consumption — industrial sector</span><span data-id>Konsumsi batubara &amp; produk batubara sektor industri</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x2</span></div><div class="var-name">Ind_Natural_gas</div><div class="var-desc"><span data-en>Natural gas consumption — industrial sector</span><span data-id>Konsumsi gas alam sektor industri</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x3</span></div><div class="var-name">Ind_Oil</div><div class="var-desc"><span data-en>Oil &amp; oil products consumption — industrial sector</span><span data-id>Konsumsi minyak &amp; produk minyak sektor industri</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x4</span></div><div class="var-name">Ind_Biofuels</div><div class="var-desc"><span data-en>Biofuels &amp; waste consumption — industrial sector</span><span data-id>Konsumsi biofuel &amp; limbah sektor industri</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x5</span></div><div class="var-name">Ind_Electricity</div><div class="var-desc"><span data-en>Electricity consumption — industrial sector</span><span data-id>Konsumsi listrik sektor industri</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x6</span></div><div class="var-name"><span data-en>HH_Oil</span><span data-id>RT_Oil</span></div><div class="var-desc"><span data-en>HH_Oil — oil product consumption, residential sector</span><span data-id>Konsumsi minyak produk sektor rumah tangga (RT_Oil)</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x7</span></div><div class="var-name"><span data-en>HH_Natural_gas</span><span data-id>RT_Natural_gas</span></div><div class="var-desc"><span data-en>HH_Natural_gas — natural gas consumption, residential sector</span><span data-id>Konsumsi gas alam sektor rumah tangga (RT_Natural_gas)</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x8</span></div><div class="var-name"><span data-en>HH_Biofuels</span><span data-id>RT_Biofuels</span></div><div class="var-desc"><span data-en>HH_Biofuels — biofuels &amp; waste consumption, residential sector</span><span data-id>Konsumsi biofuel &amp; limbah sektor rumah tangga (RT_Biofuels)</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x9</span></div><div class="var-name"><span data-en>HH_Electricity</span><span data-id>RT_Electricity</span></div><div class="var-desc"><span data-en>HH_Electricity — electricity consumption, residential sector</span><span data-id>Konsumsi listrik sektor rumah tangga (RT_Electricity)</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x10</span></div><div class="var-name"><span data-en>Com_Oil</span><span data-id>Kom_Oil</span></div><div class="var-desc"><span data-en>Oil consumption — commercial sector</span><span data-id>Konsumsi minyak sektor komersial</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x11</span></div><div class="var-name"><span data-en>Com_Biofuels</span><span data-id>Kom_Biofuels</span></div><div class="var-desc"><span data-en>Biofuels &amp; waste — commercial sector</span><span data-id>Konsumsi biofuel &amp; limbah sektor komersial</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x12</span></div><div class="var-name"><span data-en>Com_Natural_gas</span><span data-id>Kom_Natural_gas</span></div><div class="var-desc"><span data-en>Natural gas — commercial sector</span><span data-id>Konsumsi gas alam sektor komersial</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x13</span></div><div class="var-name"><span data-en>Com_Electricity</span><span data-id>Kom_Electricity</span></div><div class="var-desc"><span data-en>Electricity — commercial sector</span><span data-id>Konsumsi listrik sektor komersial</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
         <div class="drow iklim"><div><span class="var-code teal">y1</span></div><div class="var-name teal">Emission_CO₂</div><div class="var-desc"><span data-en>Annual CO₂ emissions — Indonesia</span><span data-id>Emisi karbon dioksida tahunan Indonesia</span></div><div class="var-src">Our World in Data</div><div><span class="tag tag-t">Tonnes</span></div></div>
         <div class="drow iklim"><div><span class="var-code teal">y2</span></div><div class="var-name teal">Emission_GRK</div><div class="var-desc"><span data-en>Greenhouse Gas emissions (CO₂ equivalents)</span><span data-id>Emisi gas rumah kaca (CO₂ equivalents)</span></div><div class="var-src">Our World in Data</div><div><span class="tag tag-t">Tonnes</span></div></div>
         <div class="drow iklim"><div><span class="var-code teal">y3</span></div><div class="var-name teal">Temperature</div><div class="var-desc"><span data-en>Annual surface temperature anomaly — Indonesia</span><span data-id>Anomali suhu permukaan tahunan Indonesia</span></div><div class="var-src">IMF Climate Change Data</div><div><span class="tag tag-t">°C</span></div></div>
@@ -672,9 +1379,9 @@ footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);te
         <div class="ctable-head c4"><span><span data-en>Variable</span><span data-id>Variabel</span></span><span><span data-en>Best Model</span><span data-id>Model Terbaik</span></span><span>MAE</span><span><span data-en>Notes</span><span data-id>Keterangan</span></span></div>
         <div class="crow c4 winner"><div class="cn">Ind_Electricity ★</div><div><span class="tag tag-f">Holt's</span></div><div class="cm">21,494</div><div class="cd">MAPE 4.50% — lowest MAE, best in class</div></div>
         <div class="crow c4"><div class="cn">Ind_Coal</div><div><span class="tag tag-f">Holt's</span></div><div class="cm">34,196</div><div class="cd"><span data-en>Far better than BVAR (121,623) &amp; LSTM (280,201)</span><span data-id>Jauh lebih baik dari BVAR (121.623) &amp; LSTM (280.201)</span></div></div>
-        <div class="crow c4"><div class="cn">RT_Natural_gas</div><div><span class="tag tag-f">Holt's</span></div><div class="cm">196</div><div class="cd"><span data-en>Absolute lowest MAE across all energy variables</span><span data-id>MAE terendah mutlak di seluruh variabel energi</span></div></div>
-        <div class="crow c4"><div class="cn">RT_Oil &amp; RT_Biofuels</div><div><span class="tag tag-f">Holt's</span></div><div class="cm">3,430 / 5,729</div><div class="cd"><span data-en>Consistently outperforms BVAR and Seq2Seq LSTM</span><span data-id>Konsisten unggul atas BVAR dan Seq2Seq LSTM</span></div></div>
-        <div class="crow c4"><div class="cn">Kom_Electricity</div><div><span class="tag tag-f">Holt's</span></div><div class="cm">11,354</div><div class="cd">MAPE 4.78% — <span data-en>stable across commercial sector</span><span data-id>stabil di seluruh sektor komersial</span></div></div>
+        <div class="crow c4"><div class="cn"><span data-en>HH_Natural_gas</span><span data-id>RT_Natural_gas</span></div><div><span class="tag tag-f">Holt's</span></div><div class="cm">196</div><div class="cd"><span data-en>Absolute lowest MAE across all energy variables</span><span data-id>MAE terendah mutlak di seluruh variabel energi</span></div></div>
+        <div class="crow c4"><div class="cn"><span data-en>HH_Oil &amp; HH_Biofuels</span><span data-id>RT_Oil &amp; RT_Biofuels</span></div><div><span class="tag tag-f">Holt's</span></div><div class="cm">3,430 / 5,729</div><div class="cd"><span data-en>Consistently outperforms BVAR and Seq2Seq LSTM</span><span data-id>Konsisten unggul atas BVAR dan Seq2Seq LSTM</span></div></div>
+        <div class="crow c4"><div class="cn"><span data-en>Com_Electricity</span><span data-id>Kom_Electricity</span></div><div><span class="tag tag-f">Holt's</span></div><div class="cm">11,354</div><div class="cd">MAPE 4.78% — <span data-en>stable across commercial sector</span><span data-id>stabil di seluruh sektor komersial</span></div></div>
       </div>
       <div class="section-label" style="margin-bottom:.75rem;margin-top:2rem;"><span data-en>Model Comparison — Climate Change</span><span data-id>Komparasi Model — Perubahan Iklim</span></div>
       <div class="ctable-wrap rv">
@@ -688,20 +1395,20 @@ footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);te
           <h3>Granger Causality Test</h3>
           <div class="irow"><div class="idot"></div><p><strong>Ind_Electricity → Emission_CO₂</strong> lag 1 (F=12.39, p=0.0014) — <span data-en>industrial electricity consumption is the strongest causal predictor of carbon emissions.</span><span data-id>konsumsi listrik industri adalah prediktor kausal terkuat emisi karbon.</span></p></div>
           <div class="irow"><div class="idot"></div><p><strong>Ind_Electricity → Emission_CO₂</strong> lag 2 (F=8.38, p=0.0016) — <span data-en>causal relationship persists up to 2-year lag.</span><span data-id>hubungan kausal bertahan hingga lag 2 tahun.</span></p></div>
-          <div class="irow"><div class="idot"></div><p><strong>Emission_CO₂ → RT_Natural_gas</strong> lag 5 (F=4.78, p=0.0066) — <span data-en>CO₂ emissions influence residential natural gas consumption in the long run.</span><span data-id>emisi CO₂ berpengaruh terhadap konsumsi gas alam rumah tangga jangka panjang.</span></p></div>
-          <div class="irow"><div class="idot"></div><p><strong>Emission_GRK → Kom_Biofuels</strong> lag 5 (F=4.09, p=0.0128) — <span data-en>GRK emissions consistently influence commercial biofuel consumption.</span><span data-id>emisi GRK mempengaruhi konsumsi biofuel komersial secara konsisten.</span></p></div>
-          <div class="irow"><div class="idot"></div><p><strong>RT_Biofuels → Temperature</strong> lag 2 (F=5.13, p=0.0132) — <span data-en>demonstrates an energy-climate feedback loop mechanism.</span><span data-id>menunjukkan mekanisme umpan balik (feedback loop) energi-iklim.</span></p></div>
+          <div class="irow"><div class="idot"></div><p><strong>Emission_CO₂ → <span data-en>HH_Natural_gas</span><span data-id>RT_Natural_gas</span></strong> lag 5 (F=4.78, p=0.0066) — <span data-en>CO₂ emissions influence residential natural gas consumption in the long run.</span><span data-id>emisi CO₂ berpengaruh terhadap konsumsi gas alam rumah tangga jangka panjang.</span></p></div>
+          <div class="irow"><div class="idot"></div><p><strong>Emission_GRK → <span data-en>Com_Biofuels</span><span data-id>Kom_Biofuels</span></strong> lag 5 (F=4.09, p=0.0128) — <span data-en>GRK emissions consistently influence commercial biofuel consumption.</span><span data-id>emisi GRK mempengaruhi konsumsi biofuel komersial secara konsisten.</span></p></div>
+          <div class="irow"><div class="idot"></div><p><strong><span data-en>HH_Biofuels</span><span data-id>RT_Biofuels</span> → Temperature</strong> lag 2 (F=5.13, p=0.0132) — <span data-en>demonstrates an energy-climate feedback loop mechanism.</span><span data-id>menunjukkan mekanisme umpan balik (feedback loop) energi-iklim.</span></p></div>
         </div>
         <div class="fb">
           <h3>Transfer Entropy</h3>
           <div class="irow"><div class="idot teal"></div><p><strong>Temperature → Ind_Natural_gas</strong> lag 1 (TE=0.77, p=0.00) — <span data-en>temperature change's influence on industrial gas consumption is strongest.</span><span data-id>pengaruh perubahan suhu terhadap konsumsi gas industri paling kuat.</span></p></div>
-          <div class="irow"><div class="idot teal"></div><p><strong>Temperature → RT_Natural_gas</strong> lag 1 (TE=0.76, p=0.01) — <span data-en>temperature non-linearly influences residential natural gas consumption.</span><span data-id>suhu mempengaruhi konsumsi gas alam rumah tangga secara non-linear.</span></p></div>
+          <div class="irow"><div class="idot teal"></div><p><strong>Temperature → <span data-en>HH_Natural_gas</span><span data-id>RT_Natural_gas</span></strong> lag 1 (TE=0.76, p=0.01) — <span data-en>temperature non-linearly influences residential natural gas consumption.</span><span data-id>suhu mempengaruhi konsumsi gas alam rumah tangga secara non-linear.</span></p></div>
           <div class="irow"><div class="idot teal"></div><p><strong>Ind_Coal → Emission_CO₂</strong> lag 1 (TE=0.51, p=0.08) — <span data-en>information flow from coal consumption to carbon emissions detected.</span><span data-id>aliran informasi dari konsumsi batubara ke emisi karbon terdeteksi.</span></p></div>
           <div class="irow"><div class="idot teal"></div><p><strong>Ind_Oil → Emission_GRK</strong> lag 2 (TE=0.76, p=0.08) — <span data-en>industrial oil consumption flows information to GHG emissions.</span><span data-id>konsumsi minyak industri mengalirkan informasi ke emisi GRK.</span></p></div>
           <div class="irow"><div class="idot teal"></div><p><span data-en>Non-linear relationships undetected by Granger are confirmed by Transfer Entropy, revealing <strong>complex energy-climate dynamics</strong>.</span><span data-id>Hubungan non-linier yang tidak terdeteksi Granger terkonfirmasi Transfer Entropy, menunjukkan <strong>dinamika energi-iklim yang kompleks</strong>.</span></p></div>
         </div>
       </div>
-      <div class="infobox rv" style="border-color:rgba(45,80,22,.2);background:rgba(45,80,22,.04);margin-top:1.5rem;">
+      <div class="infobox rv" style="border-color:rgba(22,163,74,.2);background:rgba(22,163,74,.06);margin-top:1.5rem;">
         <div class="infobox-title forest"><span data-en>Main Conclusion</span><span data-id>Kesimpulan Utama</span></div>
         <p style="font-size:14.5px;color:var(--text2);line-height:1.85;text-align:justify;">
           <span data-en>This research successfully achieved all stated objectives. <strong>Holt's Method</strong> proved consistently best for all energy consumption variables (MAPE 4.50% on Ind_Electricity). <strong>BVAR</strong> excels for Temperature and Emission_GRK, while <strong>Seq2Seq LSTM</strong> is optimal for Emission_CO₂ (MAPE 10.57%). Causality analysis confirms <strong>bidirectional relationships</strong> that are not only linear but also involve complex non-linear dynamics between energy consumption and climate change in Indonesia.</span>
@@ -716,11 +1423,70 @@ footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);te
 </div><!-- end page-about -->
 
 <footer>
-  <p>© 2025 SIECCI — System for Indonesian Energy Consumption &amp; Climate Change Intelligence</p>
-  <p style="margin-top:.35rem;font-size:11.5px;">Final Project D4 Applied Data Science · Politeknik Elektronika Negeri Surabaya · Powered by Tableau Public</p>
+  <p>© 2026 SIECCI — System for Indonesian Energy Consumption &amp; Climate Change Intelligence</p>
+  <p style="margin-top:.4rem;font-size:11.5px;opacity:.7;">Final Project D4 Applied Data Science · Politeknik Elektronika Negeri Surabaya · Powered by Tableau Public</p>
 </footer>
 
 <script>
+// ── Loader
+window.addEventListener('load', () => {
+  setTimeout(() => document.getElementById('loader').classList.add('hidden'), 1300);
+});
+
+// ── Scroll progress bar
+window.addEventListener('scroll', () => {
+  const pct = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+  document.getElementById('scroll-progress').style.width = Math.min(pct, 100) + '%';
+  document.getElementById('topnav').classList.toggle('scrolled', window.scrollY > 20);
+}, { passive: true });
+
+// ── Cursor glow
+const glow = document.getElementById('cursorGlow');
+if (glow) {
+  document.addEventListener('mousemove', e => {
+    glow.style.left = e.clientX + 'px';
+    glow.style.top  = e.clientY + 'px';
+  });
+}
+
+// ── Counter animation (ease-out-expo)
+function animateCounters() {
+  document.querySelectorAll('.hstat-n').forEach(el => {
+    const text = el.textContent.trim();
+    const num  = parseFloat(text.replace(/[^0-9.]/g, ''));
+    const sfx  = text.replace(/[0-9.]/g, '');
+    if (isNaN(num)) return;
+    let start = 0;
+    const dur  = 1400;
+    const step = ts => {
+      if (!start) start = ts;
+      const p = Math.min((ts - start) / dur, 1);
+      const e = 1 - Math.pow(1 - p, 4); // ease-out-quart
+      el.textContent = (num < 10 ? Math.round(e * num) : Math.round(e * num)) + sfx;
+      if (p < 1) requestAnimationFrame(step);
+      else el.textContent = num + sfx;
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+// ── 3D card tilt effect
+function initTilt() {
+  document.querySelectorAll('.card, .mcard, .person-card').forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width  - 0.5;
+      const y = (e.clientY - r.top)  / r.height - 0.5;
+      card.style.transform = `translateY(-5px) perspective(600px) rotateY(${x*7}deg) rotateX(${-y*7}deg)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = '';
+      card.style.transition = 'transform .6s cubic-bezier(.175,.885,.32,1.275), box-shadow .5s, border-color .5s';
+      setTimeout(() => card.style.transition = '', 500);
+    });
+  });
+}
+
 // ── Page navigation
 function sp(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -731,52 +1497,104 @@ function sp(id) {
   if (id === 'dashboard' && !window.tlLoaded) {
     window.tlLoaded = true;
     const viz = document.querySelector('#viz1776824865732 .tableauViz');
-    viz.style.width  = '100%';
-    viz.style.height = '800px';
-    viz.style.display = 'block';
+    viz.style.width = '100%'; viz.style.height = '800px'; viz.style.display = 'block';
     const s = document.createElement('script');
     s.src = 'https://public.tableau.com/javascripts/api/viz_v1.js';
     viz.parentNode.insertBefore(s, viz);
   }
-  window.scrollTo({ top:0, behavior:'smooth' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (id === 'home') setTimeout(animateCounters, 300);
 }
 
-
-// ── Accordion toggle for About sub-sections
+// ── Accordion
 function toggleAcc(id) {
   const section = document.getElementById(id);
-  const pill    = document.getElementById("pill-" + id);
-  const isOpen  = section.classList.contains("open");
-  document.querySelectorAll(".acc-section").forEach(s => s.classList.remove("open"));
-  document.querySelectorAll(".subnav-pill").forEach(p => p.classList.remove("open"));
+  const pill    = document.getElementById('pill-' + id);
+  const isOpen  = section.classList.contains('open');
+  document.querySelectorAll('.acc-section').forEach(s => s.classList.remove('open'));
+  document.querySelectorAll('.subnav-pill').forEach(p => p.classList.remove('open'));
   if (!isOpen) {
-    section.classList.add("open");
-    if (pill) pill.classList.add("open");
-    setTimeout(() => section.scrollIntoView({ behavior:"smooth", block:"start" }), 50);
+    section.classList.add('open');
+    if (pill) pill.classList.add('open');
+    setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
 }
 
-// ── Open accordion from outside (hero button)
 function openAcc(id) {
-  if (!document.getElementById("page-about").classList.contains("active")) {
-    sp("about");
-    setTimeout(() => toggleAcc(id), 350);
+  if (!document.getElementById('page-about').classList.contains('active')) {
+    sp('about');
+    setTimeout(() => toggleAcc(id), 420);
   } else { toggleAcc(id); }
 }
 
 // ── Language toggle
 function setLang(lang) {
-  document.body.classList.remove('lang-en','lang-id');
+  document.body.classList.remove('lang-en', 'lang-id');
   document.body.classList.add('lang-' + lang);
   document.getElementById('btn-en').classList.toggle('active', lang === 'en');
   document.getElementById('btn-id').classList.toggle('active', lang === 'id');
 }
 
-// ── Reveal on scroll
+// ── Scroll reveal with IntersectionObserver
 const obs = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
-}, { threshold: 0.06 });
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('vis'); obs.unobserve(e.target); }});
+}, { threshold: 0.05 });
 document.querySelectorAll('.rv').forEach(el => obs.observe(el));
+
+// ── Init
+setTimeout(animateCounters, 1400);
+initTilt();
+
+// ── Title colour-reveal — two phase ──────────────────
+// Phase A: immediately set words dark (runs before hero fades in)
+//          so they appear dark during the title's own fadeUp
+// Phase B: after hero is visible, words light up with colour transition
+(function() {
+  var DARK = '#111827';
+
+  function lock(sel) {
+    var el = document.querySelector(sel);
+    if (el) {
+      el.style.setProperty('color',       DARK,  'important');
+      el.style.setProperty('text-shadow', 'none','important');
+    }
+  }
+
+  function reveal(sel, brightCol, glowRgba, finalCol, ms) {
+    setTimeout(function() {
+      var el = document.querySelector(sel);
+      if (!el) return;
+      // Enable transition, THEN change colour (two rAFs = guaranteed paint commit)
+      el.style.setProperty('transition',
+        'color .65s ease-out, text-shadow .5s ease-out', 'important');
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          el.style.setProperty('color',
+            brightCol, 'important');
+          el.style.setProperty('text-shadow',
+            '0 0 22px ' + glowRgba, 'important');
+          // Settle to deeper final colour, glow fades
+          setTimeout(function() {
+            el.style.setProperty('color',       finalCol, 'important');
+            el.style.setProperty('text-shadow', 'none',   'important');
+          }, 380);
+        });
+      });
+    }, ms);
+  }
+
+  // Phase A — lock dark immediately
+  lock('.accent-energy');
+  lock('.accent-climate');
+
+  // Phase B — light up after hero is fully visible (~850ms)
+  //           energy at 1 000ms, climate at 1 260ms
+  reveal('.accent-energy',
+    '#16A34A', 'rgba(22,163,74,.38)',  '#166534', 1000);
+  reveal('.accent-climate',
+    '#3B82F6', 'rgba(59,130,246,.32)', '#1e40af', 1260);
+})();
+
 </script>
 </body>
 </html>
