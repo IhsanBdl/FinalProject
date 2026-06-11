@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIECCI — Predictive Modeling and Causality Analysis of Energy Consumption and Climate Change in Indonesia</title>
+<style>
+/* ═══════════════════════════════════════════════
+   SIECCI v4 — Premium Light · Editorial Theme
+   Sophisticated, modern, data-intelligence feel
+═══════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,600;1,9..144,700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+:root {
+  /* Backgrounds */
+  --bg:       #FAFAF8;
+  --surface:  #FFFFFF;
+  --surface2: #F3F4F6;
+  --surface3: #F0F6F1;
+
+  /* Borders */
+  --border:   #E5E7EB;
+  --border2:  #D1D5DB;
+
+  /* Text */
+  --text:  #111827;
+  --text2: #374151;
+  --muted: #6B7280;
+
+  /* ── Accents — matching SIECCI dashboard ── */
+  --forest:   #1A6B3C;   /* Deep elegant green (primary) */
+  --fv:       #16A34A;   /* Vibrant interactive green */
+  --forest-l: rgba(22,163,74,.09);
+  --forest-m: rgba(22,163,74,.18);
+  --forest-d: rgba(22,163,74,.03);
+
+  --teal:     #0F766E;
+  --teal-l:   rgba(15,118,110,.09);
+
+  --ocean:    #1D4ED8;
+  --ocean-l:  rgba(29,78,216,.09);
+
+  --rust:     #C2410C;
+  --rust-l:   rgba(194,65,12,.09);
+
+  /* Typography */
+  --serif: 'Fraunces', Georgia, serif;
+  --sans:  'DM Sans', system-ui, sans-serif;
+
+  /* Tokens */
+  --radius-card: 16px;
+  --radius-btn:  10px;
+
+  --shadow-xs:   0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.03);
+  --shadow-sm:   0 2px 8px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.04);
+  --shadow-card: 0 4px 16px rgba(0,0,0,.05), 0 12px 40px rgba(0,0,0,.07);
+  --shadow-card-hover: 0 16px 56px rgba(0,0,0,.12), 0 4px 16px rgba(0,0,0,.06);
+  --shadow-btn:  0 4px 16px rgba(22,163,74,.28);
+  --shadow-btn-h:0 8px 32px rgba(22,163,74,.38);
+}
+
+/* ─── RESET & BASE ─── */
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-x: hidden;
+}
+
+/* Grain texture overlay */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(249,250,251,.9) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ─── SCROLL PROGRESS ─── */
+#scroll-progress {
+  position: fixed; top: 0; left: 0;
+  height: 2.5px; width: 0%;
+  background: linear-gradient(90deg, var(--fv), var(--teal));
+  z-index: 1000;
+  transition: width .1s linear;
+  box-shadow: 0 0 8px rgba(22,163,74,.5);
+}
+
+/* ─── LOADER ─── */
+#loader {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1.5rem;
+  transition: opacity .7s ease, visibility .7s ease;
+}
+#loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.loader-mark {
+  width: 58px; height: 58px; border-radius: 16px;
+  background: var(--forest);
+  display: flex; align-items: center; justify-content: center;
+  animation: loaderPulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(22,163,74,.4);
+}
+@keyframes loaderPulse {
+  0%,100% { transform:scale(1); box-shadow:0 0 0 0 rgba(22,163,74,.4); }
+  50%      { transform:scale(1.06); box-shadow:0 0 0 18px rgba(22,163,74,0); }
+}
+.loader-bar {
+  width: 200px; height: 2px;
+  background: var(--border); border-radius: 2px; overflow: hidden;
+}
+.loader-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--fv), var(--teal));
+  border-radius: 2px;
+  animation: loaderFill 1.4s cubic-bezier(.4,0,.2,1) forwards;
+}
+@keyframes loaderFill { from { width:0 } to { width:100% } }
+.loader-text {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+}
+
+/* ─── CURSOR GLOW ─── */
+.cursor-glow {
+  position: fixed; width: 480px; height: 480px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(22,163,74,.045) 0%, transparent 70%);
+  pointer-events: none; z-index: 1;
+  transform: translate(-50%,-50%);
+  transition: left .1s linear, top .1s linear;
+}
+
+/* ─── TOPNAV ─── */
+#topnav {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(246,249,246,.9);
+  border-bottom: 1px solid rgba(221,232,223,.7);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  transition: background .3s, box-shadow .3s;
+}
+#topnav.scrolled {
+  background: rgba(246,249,246,.97);
+  box-shadow: 0 4px 40px rgba(0,0,0,.07);
+}
+.nav-inner {
+  max-width: 1400px; margin: 0 auto;
+  display: flex; align-items: center;
+  padding: 0 2rem; height: 64px; gap: 1.5rem;
+}
+.nav-brand { display:flex; align-items:center; cursor:pointer; flex-shrink:0; transition:opacity .2s; }
+.nav-brand:hover { opacity: .75; }
+.nav-bmark {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--forest);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 12px rgba(26,107,60,.28);
+  transition: all .25s;
+}
+.nav-brand:hover .nav-bmark { transform: rotate(-5deg) scale(1.05); }
+.nav-bmark svg { width: 16px; height: 16px; }
+.nav-bname {
+  font-family: var(--sans); font-size: 14px; font-weight: 700;
+  color: var(--text); letter-spacing: .02em;
+}
+.nav-divider { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+.nav-tabs { display: flex; gap: 2px; flex: 1; }
+.nt {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 15px; border-radius: 8px;
+  cursor: pointer; font-size: 13px; font-weight: 400;
+  color: var(--muted); white-space: nowrap;
+  transition: all .22s cubic-bezier(.4,0,.2,1);
+  border: none; background: none;
+  font-family: var(--sans); position: relative;
+}
+.nt::after {
+  content:''; position:absolute; bottom:4px;
+  left:50%; transform:translateX(-50%) scaleX(0);
+  width:20px; height:1.5px;
+  background: var(--fv); border-radius:2px;
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+}
+.nt:hover { color:var(--text); background:var(--surface2); }
+.nt.active { color:var(--forest); background:var(--forest-l); font-weight:600; }
+.nt.active::after { transform: translateX(-50%) scaleX(1); }
+.nt svg { width:15px; height:15px; opacity:.55; flex-shrink:0; transition:opacity .2s; }
+.nt.active svg { opacity:1; }
+.nav-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+
+.lang-toggle {
+  display:flex; background:var(--surface2);
+  border:1px solid var(--border); border-radius:8px; overflow:hidden;
+}
+.lang-btn {
+  padding:6px 12px; font-size:12px; font-weight:600;
+  font-family:var(--sans); border:none; background:none;
+  cursor:pointer; color:var(--muted); transition:all .2s; line-height:1;
+}
+.lang-btn.active { background:var(--forest); color:#fff; font-weight:700; }
+
+.nav-cta {
+  background: var(--forest); color: #fff;
+  border: none; padding: 9px 20px;
+  border-radius: var(--radius-btn); font-size: 13px; font-weight: 600;
+  font-family: var(--sans); cursor: pointer;
+  transition: all .25s cubic-bezier(.4,0,.2,1);
+  box-shadow: var(--shadow-btn);
+}
+.nav-cta:hover { background: #155e34; transform: translateY(-1.5px); box-shadow: var(--shadow-btn-h); }
+.nav-cta:active { transform: translateY(0); }
+
+/* ─── PAGE SYSTEM ─── */
+.page { display:none; position:relative; z-index:2; }
+.page.active { display:block; animation: pgin .5s cubic-bezier(.4,0,.2,1); }
+@keyframes pgin { from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);} }
+
+/* ─── SHARED ─── */
+.container { max-width:1200px; margin:0 auto; padding:4.5rem 2.5rem; }
+.section-label {
+  font-family:var(--sans); font-size:11px; font-weight:700;
+  letter-spacing:.15em; text-transform:uppercase; color:var(--fv);
+  margin-bottom:.65rem;
+  display:flex; align-items:center; gap:8px;
+}
+.section-label::before {
+  content:''; width:16px; height:2px;
+  background:var(--fv); border-radius:2px; flex-shrink:0;
+}
+.section-label::after {
+  content:''; width:6px; height:6px;
+  background:var(--fv); border-radius:50%; flex-shrink:0;
+  animation: labelDot 2s ease-in-out infinite;
+}
+@keyframes labelDot { 0%,100%{opacity:1;}50%{opacity:.3;} }
+.section-title {
+  font-family:var(--serif);
+  font-size:clamp(1.9rem,3.5vw,2.8rem);
+  color:var(--text); line-height:1.14;
+  margin-bottom:.9rem; letter-spacing:-.03em;
+}
+.section-lead {
+  font-size:15.5px; color:var(--text2);
+  max-width:680px; line-height:1.85;
+  margin-bottom:3rem; text-align:justify;
+}
+
+.sub-section { padding:4rem 0; border-top:1px solid var(--border); }
+.sub-section:first-child { border-top:none; padding-top:0; }
+
+.about-subnav {
+  display:flex; gap:8px; flex-wrap:wrap;
+  margin-bottom:3rem; padding-bottom:1.5rem; border-bottom:1px solid var(--border);
+}
+.subnav-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:7px 16px; border-radius:24px;
+  font-size:12.5px; font-weight:500; color:var(--muted);
+  border:1px solid var(--border); background:var(--surface);
+  cursor:pointer; transition:all .22s cubic-bezier(.4,0,.2,1);
+  text-decoration:none;
+}
+.subnav-pill:hover { color:var(--forest); border-color:rgba(22,163,74,.3); background:var(--forest-l); transform:translateY(-1.5px); box-shadow:var(--shadow-xs); }
+.subnav-pill.open { color:var(--forest); border-color:rgba(22,163,74,.3); background:var(--forest-l); font-weight:600; }
+
+/* ─── HERO ─── */
+.hero {
+  min-height: calc(100vh - 64px);
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5rem 2.5rem 4rem;
+  max-width:1200px; margin:0 auto;
+  position:relative; z-index:2;
+}
+.hero-bg { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+.hero-orb {
+  position:absolute; border-radius:50%;
+  filter:blur(70px); animation:orbFloat 12s ease-in-out infinite;
+}
+.hero-orb-1 { width:700px; height:700px; background:radial-gradient(circle,rgba(22,163,74,.07),transparent 70%); top:-15%; left:-10%; animation-delay:0s; }
+.hero-orb-2 { width:500px; height:500px; background:radial-gradient(circle,rgba(15,118,110,.055),transparent 70%); bottom:5%; right:-5%; animation-delay:-5s; }
+.hero-orb-3 { width:400px; height:400px; background:radial-gradient(circle,rgba(29,78,216,.04),transparent 70%); top:40%; left:55%; animation-delay:-9s; }
+@keyframes orbFloat {
+  0%,100%{transform:translate(0,0) scale(1);}
+  33%{transform:translate(25px,-20px) scale(1.04);}
+  66%{transform:translate(-15px,15px) scale(.97);}
+}
+
+.hero-eyebrow {
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:var(--sans); font-size:11.5px; font-weight:700;
+  letter-spacing:.1em; text-transform:uppercase;
+  color:var(--forest); background:var(--forest-l);
+  padding:6px 14px; border-radius:6px;
+  border:1px solid rgba(22,163,74,.2);
+  margin-bottom:2rem; width:fit-content;
+  animation:fadeUp .6s .1s both;
+}
+
+/* ─── HERO TITLE — Two elegant accents ─── */
+.hero-title {
+  font-family: var(--serif);
+  font-size: clamp(2.6rem, 5.2vw, 4.8rem);
+  color: var(--text); line-height: 1.08;
+  margin-bottom: 1.5rem; letter-spacing: -.038em;
+  max-width: 920px;
+  animation: fadeUp .65s .2s both;
+  font-weight: 600;
+}
+.accent-energy {
+  color: var(--forest);
+  font-style: italic;
+  font-weight: 600;
+  position: relative;
+  display: inline-block;
+}
+.accent-energy::after {
+  content: '';
+  position: absolute;
+  bottom: 3px; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--forest), var(--fv));
+  border-radius: 2px;
+  transform: scaleX(0); transform-origin: left;
+  animation: lineSlideIn .7s .9s cubic-bezier(.4,0,.2,1) forwards;
+}
+.accent-climate {
+  color: var(--teal);
+  font-style: italic;
+  font-weight: 600;
+  position: relative;
+  display: inline-block;
+}
+.accent-climate::after {
+  content: '';
+  position: absolute;
+  bottom: 3px; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--teal), var(--ocean));
+  border-radius: 2px;
+  transform: scaleX(0); transform-origin: left;
+  animation: lineSlideIn .7s 1.15s cubic-bezier(.4,0,.2,1) forwards;
+}
+@keyframes lineSlideIn { from{transform:scaleX(0);}to{transform:scaleX(1);} }
+
+.hero-subtitle {
+  font-size: 16.5px; color: var(--text2);
+  max-width: 600px; line-height: 1.85; margin-bottom: 2.5rem;
+  animation: fadeUp .65s .3s both;
+}
+.hero-actions { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:2.5rem; animation:fadeUp .65s .4s both; }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(26px);}to{opacity:1;transform:translateY(0);} }
+
+.btn-primary {
+  background: var(--forest); color: #fff;
+  border: none; padding: 14px 28px;
+  border-radius: var(--radius-btn); font-size: 14px; font-weight: 600;
+  font-family: var(--sans); cursor: pointer;
+  transition: all .28s cubic-bezier(.4,0,.2,1);
+  box-shadow: var(--shadow-btn);
+  display: inline-flex; align-items: center; gap: 8px;
+  position: relative; overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.12), transparent);
+}
+.btn-primary:hover { background: #155e34; transform: translateY(-2.5px); box-shadow: var(--shadow-btn-h); }
+.btn-primary:active { transform: translateY(0); }
+
+.btn-outline {
+  background: var(--surface); color: var(--text);
+  border: 1.5px solid var(--border2);
+  padding: 13px 26px; border-radius: var(--radius-btn);
+  font-size: 14px; font-weight: 500; font-family: var(--sans);
+  cursor: pointer; transition: all .24s cubic-bezier(.4,0,.2,1);
+}
+.btn-outline:hover { border-color:var(--forest); color:var(--forest); background:var(--forest-l); transform:translateY(-1.5px); }
+
+.sdg-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:3rem; animation:fadeUp .65s .5s both; }
+.sdg-pill {
+  font-family:var(--sans); font-size:12px; font-weight:600;
+  padding:6px 13px; border-radius:6px; letter-spacing:.02em;
+  transition:all .22s;
+}
+.sdg-pill:hover { transform:translateY(-1.5px); box-shadow:var(--shadow-xs); }
+.sdg-7  { background:rgba(194,65,12,.08); color:var(--rust); border:1px solid rgba(194,65,12,.22); }
+.sdg-13 { background:var(--forest-l); color:var(--forest); border:1px solid rgba(22,163,74,.25); }
+.sdg-note { font-size:12px; color:var(--muted); }
+
+.hero-stats {
+  display:grid; grid-template-columns:repeat(4,1fr);
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); overflow:hidden; max-width:700px;
+  animation:fadeUp .65s .65s both;
+  box-shadow:var(--shadow-sm);
+}
+.hstat { padding:1.4rem 1.5rem; border-right:1px solid var(--border); text-align:center; transition:background .25s; }
+.hstat:hover { background:var(--surface2); }
+.hstat:last-child { border-right:none; }
+.hstat-n {
+  font-family:var(--serif); font-size:28px; color:var(--forest);
+  line-height:1; margin-bottom:5px; font-weight:700;
+  transition:transform .22s;
+}
+.hstat:hover .hstat-n { transform:scale(1.06); }
+.hstat-l { font-size:11.5px; color:var(--muted); line-height:1.4; font-weight:400; }
+
+/* ticker removed */
+.ticker-sep { color:var(--border2); font-size:16px; }
+
+/* ─── CARDS ─── */
+.card-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1.25rem; }
+.card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); padding:1.85rem;
+  transition:transform .32s cubic-bezier(.175,.885,.32,1.275),
+             box-shadow .32s cubic-bezier(.175,.885,.32,1.275),
+             border-color .32s;
+  position:relative; overflow:hidden;
+  will-change: transform;
+}
+.card::after {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, var(--fv), var(--teal));
+  transform:scaleX(0); transform-origin:left;
+  transition:transform .35s cubic-bezier(.4,0,.2,1);
+}
+.card:hover { box-shadow:var(--shadow-card-hover); border-color:rgba(22,163,74,.2); }
+.card:hover::after { transform:scaleX(1); }
+
+/* Premium SVG icon container */
+.card-icon {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  background: var(--forest-l);
+  border: 1px solid rgba(22,163,74,.16);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 1.2rem;
+  transition: all .32s cubic-bezier(.175,.885,.32,1.275);
+  position: relative;
+}
+.card-icon svg {
+  width: 22px; height: 22px;
+  color: var(--forest);
+  transition: transform .32s cubic-bezier(.175,.885,.32,1.275);
+}
+.card:hover .card-icon {
+  background: linear-gradient(135deg, rgba(22,163,74,.16), rgba(22,163,74,.06));
+  box-shadow: 0 0 0 6px rgba(22,163,74,.07);
+  transform: translateY(-2px);
+}
+.card:hover .card-icon svg { transform: scale(1.15) rotate(-8deg); }
+.card h3 { font-family:var(--serif); font-size:18px; color:var(--text); margin-bottom:.5rem; letter-spacing:-.015em; }
+.card p  { font-size:13.5px; color:var(--text2); line-height:1.82; text-align:justify; }
+
+/* ─── STAT BLOCKS ─── */
+.stat-block {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); padding:1.35rem 1.6rem;
+  border-left:2.5px solid var(--fv);
+  transition:all .26s cubic-bezier(.4,0,.2,1);
+  position:relative; overflow:hidden;
+}
+.stat-block::before { content:''; position:absolute; inset:0; background:linear-gradient(90deg,var(--forest-d),transparent); }
+.stat-block:hover { transform:translateX(5px); box-shadow:var(--shadow-sm); border-left-color:var(--forest); }
+.stat-block.ocean { border-left-color:var(--ocean); }
+.stat-block.ocean::before { background:linear-gradient(90deg,rgba(29,78,216,.03),transparent); }
+.stat-block.rust { border-left-color:var(--rust); }
+.stat-block.rust::before { background:linear-gradient(90deg,rgba(194,65,12,.03),transparent); }
+.stat-block.teal { border-left-color:var(--teal); }
+.stat-block.teal::before { background:linear-gradient(90deg,rgba(15,118,110,.03),transparent); }
+.stat-block .sbn { font-family:var(--serif); font-size:22px; font-weight:600; color:var(--text); margin-bottom:3px; }
+.stat-block .sbl { font-size:12.5px; color:var(--text2); line-height:1.55; }
+.stat-block .sbs { font-size:11px; color:var(--muted); margin-top:5px; font-style:italic; }
+
+/* ─── TWO-COL ─── */
+.two-col      { display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin-bottom:2.5rem; }
+.two-col-wide { display:grid; grid-template-columns:1.1fr .9fr; gap:2.5rem; margin-bottom:2.5rem; }
+
+/* ─── INFOBOX ─── */
+.infobox {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); padding:2rem; margin-bottom:1.5rem;
+  transition:all .26s;
+}
+.infobox:hover { box-shadow:var(--shadow-sm); }
+.infobox-title {
+  font-family:var(--sans); font-size:11px; font-weight:700;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--teal);
+  padding-bottom:.75rem; margin-bottom:1.25rem; border-bottom:1px solid var(--border);
+}
+.infobox-title.forest { color:var(--forest); }
+.infobox-title.ocean  { color:var(--ocean); }
+.infobox-title.rust   { color:var(--rust); }
+
+/* ─── ITEM ROWS ─── */
+.irow { display:flex; gap:11px; margin-bottom:.9rem; align-items:flex-start; }
+.irow:last-child { margin-bottom:0; }
+.inum {
+  font-family:var(--sans); font-size:11px; font-weight:700;
+  color:var(--fv); background:var(--forest-l);
+  width:22px; height:22px; border-radius:5px;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0; margin-top:2px; border:1px solid rgba(22,163,74,.2);
+}
+.inum.ocean { color:var(--ocean); background:var(--ocean-l); border-color:rgba(29,78,216,.2); }
+.inum.teal  { color:var(--teal);  background:var(--teal-l);  border-color:rgba(15,118,110,.2); }
+.irow p  { font-size:13.5px; color:var(--text2); line-height:1.7; }
+.idot { width:6px; height:6px; border-radius:50%; background:var(--fv); flex-shrink:0; margin-top:9px; }
+.idot.teal  { background:var(--teal); }
+.idot.ocean { background:var(--ocean); }
+.idot.rust  { background:var(--rust); }
+
+/* ─── TAGS ─── */
+.tag { display:inline-block; font-family:var(--sans); font-size:11px; font-weight:600; padding:4px 10px; border-radius:5px; letter-spacing:.01em; }
+.tag-f { background:var(--forest-l); color:var(--forest); border:1px solid rgba(22,163,74,.2); }
+.tag-t { background:var(--teal-l);   color:var(--teal);   border:1px solid rgba(15,118,110,.2); }
+.tag-o { background:var(--ocean-l);  color:var(--ocean);  border:1px solid rgba(29,78,216,.2); }
+.tag-m { background:var(--surface2); color:var(--muted);  border:1px solid var(--border); }
+.tag-r { background:var(--rust-l);   color:var(--rust);   border:1px solid rgba(194,65,12,.2); }
+
+/* ─── DATA TABLE ─── */
+.dtable-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-card); overflow:hidden; margin-bottom:1.5rem; box-shadow:var(--shadow-xs); }
+.dtable-head { display:grid; grid-template-columns:64px 1.1fr 1.4fr 1fr .7fr; padding:.75rem 1.5rem; background:var(--surface2); font-family:var(--sans); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); gap:1rem; }
+.drow { display:grid; grid-template-columns:64px 1.1fr 1.4fr 1fr .7fr; padding:.85rem 1.5rem; border-bottom:1px solid var(--border); font-size:13px; gap:1rem; align-items:center; transition:background .18s; }
+.drow:last-child { border-bottom:none; }
+.drow:hover { background:var(--surface2); }
+.drow.iklim { background:rgba(15,118,110,.03); }
+.drow.iklim:hover { background:rgba(15,118,110,.07); }
+.var-code { font-family:var(--sans); font-size:11px; font-weight:700; color:var(--forest); background:var(--forest-l); padding:3px 8px; border-radius:4px; width:fit-content; border:1px solid rgba(22,163,74,.15); }
+.var-code.teal { color:var(--teal); background:var(--teal-l); border-color:rgba(15,118,110,.15); }
+.var-name { color:var(--text); font-weight:500; font-size:13px; }
+.var-name.teal { color:var(--teal); }
+.var-desc { color:var(--text2); font-size:12.5px; }
+.var-src  { color:var(--muted); font-size:12px; }
+
+/* ─── COMPARISON TABLE ─── */
+.ctable-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-card); overflow:hidden; margin-bottom:1.5rem; box-shadow:var(--shadow-xs); }
+.ctable-head { display:grid; gap:1rem; padding:.75rem 1.5rem; background:var(--surface2); font-family:var(--sans); font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); }
+.ctable-head.c4 { grid-template-columns:1.5fr .9fr .9fr 1.3fr; }
+.ctable-head.c3 { grid-template-columns:1.5fr 1fr 1.5fr; }
+.crow { display:grid; gap:1rem; padding:.9rem 1.5rem; border-bottom:1px solid var(--border); font-size:13px; align-items:center; transition:background .18s; }
+.crow:last-child { border-bottom:none; }
+.crow:hover { background:var(--surface2); }
+.crow.c4 { grid-template-columns:1.5fr .9fr .9fr 1.3fr; }
+.crow.c3 { grid-template-columns:1.5fr 1fr 1.5fr; }
+.crow.winner { background:var(--forest-l); }
+.crow.winner:hover { background:var(--forest-m); }
+.crow.winner .cn { color:var(--forest); }
+.crow .cn { font-weight:500; color:var(--text); }
+.crow .cm { font-size:12.5px; color:var(--text2); font-weight:500; }
+.crow .cd { font-size:12.5px; color:var(--text2); }
+
+/* ─── METHOD CARDS ─── */
+.method-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.25rem; margin-bottom:2rem; }
+.mcard {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); padding:1.85rem;
+  position:relative; overflow:hidden;
+  transition:transform .32s cubic-bezier(.175,.885,.32,1.275),
+             box-shadow .32s,border-color .32s;
+  will-change:transform;
+}
+.mcard::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--fv),rgba(22,163,74,.2)); transform:scaleX(0); transition:transform .38s cubic-bezier(.4,0,.2,1); transform-origin:left; }
+.mcard.teal::after  { background:linear-gradient(90deg,var(--teal),rgba(15,118,110,.2)); }
+.mcard.ocean::after { background:linear-gradient(90deg,var(--ocean),rgba(29,78,216,.2)); }
+.mcard:hover::after { transform:scaleX(1); }
+.mcard:hover { box-shadow:var(--shadow-card-hover); border-color:rgba(22,163,74,.2); }
+.mcard.teal:hover  { border-color:rgba(15,118,110,.2); }
+.mcard.ocean:hover { border-color:rgba(29,78,216,.2); }
+.mc-num { font-family:var(--serif); font-size:56px; color:rgba(0,0,0,.03); position:absolute; top:.4rem; right:1rem; line-height:1; pointer-events:none; font-weight:700; }
+.mc-tag { font-family:var(--sans); font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--fv); margin-bottom:.75rem; }
+.mcard.teal .mc-tag  { color:var(--teal); }
+.mcard.ocean .mc-tag { color:var(--ocean); }
+.mcard h3 { font-family:var(--serif); font-size:18px; color:var(--text); margin-bottom:.7rem; line-height:1.3; letter-spacing:-.015em; }
+.mcard p  { font-size:13px; color:var(--text2); line-height:1.8; }
+.mc-badge { display:inline-block; margin-top:1rem; font-family:var(--sans); font-size:11px; font-weight:600; padding:4px 10px; border-radius:5px; background:var(--surface2); color:var(--muted); border:1px solid var(--border); }
+
+/* ─── FINDINGS ─── */
+.fb { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-card); padding:2rem; transition:all .26s; }
+.fb:hover { box-shadow:var(--shadow-sm); }
+.fb h3 { font-family:var(--serif); font-size:20px; color:var(--text); margin-bottom:1.25rem; padding-bottom:.75rem; border-bottom:1px solid var(--border); letter-spacing:-.015em; }
+
+/* ─── DASHBOARD ─── */
+.dash-header { background:var(--surface); border-bottom:1px solid var(--border); padding:2rem 2.5rem; }
+.dash-header-inner { max-width:1620px; margin:0 auto; }
+.dash-header h2 { font-family:var(--serif); font-size:28px; color:var(--text); margin-bottom:4px; letter-spacing:-.025em; }
+.dash-header p { font-size:13.5px; color:var(--muted); }
+.dash-tag-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:.75rem; }
+.dtag { font-family:var(--sans); font-size:11px; font-weight:600; padding:5px 11px; border-radius:5px; letter-spacing:.01em; transition:transform .2s; }
+.dtag:hover { transform:translateY(-1px); }
+.dtag-g { background:var(--forest-l); color:var(--forest); border:1px solid rgba(22,163,74,.2); }
+.dtag-t { background:var(--teal-l);   color:var(--teal);   border:1px solid rgba(15,118,110,.2); }
+.dtag-m { background:var(--surface2); color:var(--muted);  border:1px solid var(--border); }
+.dash-body { max-width:1620px; margin:0 auto; padding:2rem 2.5rem; }
+.viz-shell { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-card); overflow:hidden; box-shadow:var(--shadow-sm); }
+.viz-header { padding:16px 20px; background:var(--surface2); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.vdots { display:flex; gap:6px; }
+.vd { width:11px; height:11px; border-radius:50%; }
+.vd-r{background:#FF5F57;}.vd-y{background:#FEBC2E;}.vd-g{background:#28C840;}
+.vtl   { font-family:var(--sans); font-size:12px; font-weight:600; color:var(--text); }
+.vhint { font-family:var(--sans); font-size:12px; color:var(--muted); }
+/* ── Tableau: locked to design dims, scales to container ── */
+.tableau-wrap {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  background: #fff;
+  /* height set dynamically by resizeTableau() */
+}
+#viz1776824865732 {
+  width: 1456px;          /* design width = 1536 CSS px - 80px padding */
+  transform-origin: top left;
+}
+.tableauPlaceholder { border:none; display:block; }
+
+/* ─── PERSON CARD ─── */
+.person-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); padding:1.85rem;
+  transition:all .26s cubic-bezier(.4,0,.2,1);
+}
+.person-card:hover { box-shadow:var(--shadow-card); transform:translateY(-2px); border-color:rgba(22,163,74,.2); }
+.pc-role { font-family:var(--sans); font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--fv); margin-bottom:.5rem; }
+.pc-name { font-family:var(--serif); font-size:22px; color:var(--text); margin-bottom:.25rem; letter-spacing:-.015em; }
+.pc-sub  { font-size:13px; color:var(--muted); margin-bottom:1.1rem; }
+.person-card p { font-size:13.5px; color:var(--text2); line-height:1.75; text-align:justify; }
+.info-pair { display:grid; grid-template-columns:150px 1fr; gap:.5rem 1rem; margin-bottom:.6rem; font-size:13.5px; }
+.info-pair:last-child { margin-bottom:0; }
+.info-key { color:var(--muted); font-size:13px; }
+.info-val { color:var(--text2); }
+
+/* ─── ACCORDION ─── */
+.acc-section { display:none; overflow:hidden; }
+.acc-section.open { display:block; animation:pgin .4s cubic-bezier(.4,0,.2,1); }
+.pill-arrow { font-size:10px; margin-left:4px; display:inline-block; transition:transform .28s cubic-bezier(.4,0,.2,1); }
+.subnav-pill.open .pill-arrow { transform:rotate(180deg); }
+
+/* ─── REVEAL ─── */
+.rv { opacity:0; transform:translateY(22px); transition:opacity .6s cubic-bezier(.4,0,.2,1),transform .6s cubic-bezier(.4,0,.2,1); }
+.rv.vis { opacity:1; transform:translateY(0); }
+.rv:nth-child(2){transition-delay:.09s;}
+.rv:nth-child(3){transition-delay:.18s;}
+.rv:nth-child(4){transition-delay:.27s;}
+
+/* ─── LANG ─── */
+[data-en],[data-id]{transition:opacity .2s;}
+body.lang-id [data-en]{display:none;}
+body.lang-en [data-id]{display:none;}
+
+/* ─── FOOTER ─── */
+footer {
+  margin-top:3rem; padding:2.5rem 2.5rem;
+  border-top:1px solid var(--border);
+  text-align:center; font-size:12.5px; color:var(--muted);
+  background:var(--surface); position:relative; z-index:2;
+}
+footer::before {
+  content:''; position:absolute; top:0; left:50%;
+  transform:translateX(-50%); width:100px; height:1.5px;
+  background:linear-gradient(90deg,transparent,var(--fv),transparent);
+}
+
+/* ─── SECTION BAND ─── */
+.section-band {
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  position:relative; z-index:2;
+}
+.section-band::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1.5px;
+  background:linear-gradient(90deg,transparent,rgba(22,163,74,.35),transparent);
+}
+
+/* ─── MOBILE ─── */
+@media(max-width:900px){
+  .nav-inner{gap:.75rem;padding:0 1rem;}
+  .nav-divider{display:none;}
+  .nt svg{display:none;}
+  .nt{font-size:12px;padding:6px 10px;}
+  .nav-cta{padding:7px 12px;font-size:12px;}
+  .container{padding:3rem 1.5rem;}
+  .hero{padding:3rem 1.5rem 2.5rem;}
+  .hero-title{font-size:2.2rem;}
+  .two-col,.two-col-wide,.method-grid,.card-grid{grid-template-columns:1fr;}
+  .hero-stats{grid-template-columns:repeat(2,1fr);}
+  .hstat:nth-child(2){border-right:none;}
+  .hstat:nth-child(3){border-top:1px solid var(--border);}
+  .dtable-head,.drow{grid-template-columns:60px 1fr 1fr;}
+  .dtable-head>*:nth-child(n+4),.drow>*:nth-child(n+4){display:none;}
+  .ctable-head.c4,.crow.c4{grid-template-columns:1fr 1fr;}
+  .ctable-head.c4>*:nth-child(n+3),.crow.c4>*:nth-child(n+3){display:none;}
+  .dash-header,.dash-body{padding-left:1.5rem;padding-right:1.5rem;}
+  .tableau-wrap{ overflow:hidden; }
+  #viz1776824865732{ transform:none !important; width:100% !important; }
+  .tableauPlaceholder{ height:auto; }
+  .cursor-glow{display:none;}
+
+}
+
+/* ════════════════════════════════════════════
+   SIECCI v5 — Colorful · Cheerful · Alive
+   ────────────────────────────────────────── */
+
+/* ── COLOR PALETTE EXPANSION ── */
+:root {
+  --purple:   #7C3AED;
+  --purple-l: rgba(124,58,237,.09);
+  --amber:    #D97706;
+  --amber-l:  rgba(217,119,6,.09);
+}
+
+/* ── TITLE: Highlighter-pill effect (no italic, no underline) ── */
+.accent-energy {
+  color: #166534 !important;
+  font-style: normal !important;
+  font-weight: 700;
+  display: inline-block;
+  position: relative;
+}
+.accent-energy::before {
+  content: '';
+  position: absolute;
+  top: 8%; bottom: 8%; left: -5px; right: -5px;
+  background: rgba(22,163,74,.15);
+  border-radius: 6px;
+  z-index: -1;
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: pillReveal .6s .82s cubic-bezier(.4,0,.2,1) forwards;
+}
+.accent-energy::after { display: none !important; }
+
+.accent-climate {
+  color: #1e40af !important;
+  font-style: normal !important;
+  font-weight: 700;
+  display: inline-block;
+  position: relative;
+}
+.accent-climate::before {
+  content: '';
+  position: absolute;
+  inset: -2px -2px;
+  background: rgba(29,78,216,.12);
+  border-radius: 8px;
+  z-index: -1;
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: pillReveal .6s 1.08s cubic-bezier(.4,0,.2,1) forwards;
+}
+.accent-climate::after { display: none !important; }
+
+@keyframes pillReveal {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* ── HERO EYEBROW — floating + gradient border ── */
+.hero-eyebrow {
+  background: linear-gradient(var(--bg),var(--bg)) padding-box,
+              linear-gradient(135deg,#16A34A,#2563EB,#0F766E) border-box !important;
+  border: 1.5px solid transparent !important;
+  color: #166534 !important;
+  animation: fadeUp .6s .1s both, floatBadge 3.5s 1s ease-in-out infinite !important;
+}
+@keyframes floatBadge {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-4px); }
+}
+
+/* ── HERO ORB: add orange for color variety ── */
+.hero-orb-2 {
+  background: radial-gradient(circle,rgba(194,65,12,.07),transparent 70%) !important;
+}
+.hero-orb-3 {
+  background: radial-gradient(circle,rgba(29,78,216,.08),transparent 70%) !important;
+}
+
+/* ── HERO STATS: every stat its own color ── */
+.hstat:nth-child(1) .hstat-n { color: #16A34A; }
+.hstat:nth-child(2) .hstat-n { color: #2563EB; }
+.hstat:nth-child(3) .hstat-n { color: #C2410C; }
+.hstat:nth-child(4) .hstat-n { color: #0F766E; }
+
+.hstat:nth-child(1):hover { background: rgba(22,163,74,.07) !important; }
+.hstat:nth-child(2):hover { background: rgba(37,99,235,.07) !important; }
+.hstat:nth-child(3):hover { background: rgba(194,65,12,.07) !important; }
+.hstat:nth-child(4):hover { background: rgba(15,118,110,.07) !important; }
+
+/* ── CARD COLOR VARIANTS — 4 distinct colors ── */
+/* Energy — Green */
+.card-energy .card-icon { background:rgba(22,163,74,.12)!important; border-color:rgba(22,163,74,.22)!important; }
+.card-energy .card-icon svg { color:#16A34A !important; }
+.card-energy::after { background:linear-gradient(90deg,#16A34A,#0F766E)!important; }
+.card-energy:hover { border-color:rgba(22,163,74,.28)!important; box-shadow:0 16px 56px rgba(22,163,74,.1),0 4px 16px rgba(0,0,0,.06)!important; }
+
+/* Climate — Teal-Blue */
+.card-climate .card-icon { background:rgba(15,118,110,.12)!important; border-color:rgba(15,118,110,.22)!important; }
+.card-climate .card-icon svg { color:#0F766E !important; }
+.card-climate::after { background:linear-gradient(90deg,#0F766E,#2563EB)!important; }
+.card-climate:hover { border-color:rgba(15,118,110,.28)!important; box-shadow:0 16px 56px rgba(15,118,110,.1),0 4px 16px rgba(0,0,0,.06)!important; }
+
+/* Causality — Orange */
+.card-causality .card-icon { background:rgba(194,65,12,.12)!important; border-color:rgba(194,65,12,.22)!important; }
+.card-causality .card-icon svg { color:#C2410C !important; }
+.card-causality::after { background:linear-gradient(90deg,#C2410C,#EA580C)!important; }
+.card-causality:hover { border-color:rgba(194,65,12,.28)!important; box-shadow:0 16px 56px rgba(194,65,12,.1),0 4px 16px rgba(0,0,0,.06)!important; }
+
+/* Forecast — Blue-Purple */
+.card-forecast .card-icon { background:rgba(37,99,235,.12)!important; border-color:rgba(37,99,235,.22)!important; }
+.card-forecast .card-icon svg { color:#2563EB !important; }
+.card-forecast::after { background:linear-gradient(90deg,#2563EB,#7C3AED)!important; }
+.card-forecast:hover { border-color:rgba(37,99,235,.28)!important; box-shadow:0 16px 56px rgba(37,99,235,.1),0 4px 16px rgba(0,0,0,.06)!important; }
+
+/* ── NAV CTA: gradient ── */
+.nav-cta {
+  background: linear-gradient(135deg,#1A6B3C,#2563EB) !important;
+  box-shadow: 0 4px 16px rgba(26,107,60,.22), 0 4px 16px rgba(37,99,235,.18) !important;
+}
+.nav-cta:hover {
+  background: linear-gradient(135deg,#155e34,#1a44c4) !important;
+  box-shadow: 0 8px 32px rgba(26,107,60,.28), 0 8px 32px rgba(37,99,235,.22) !important;
+}
+
+/* ── SDG PILLS: more vibrant ── */
+.sdg-7 { background:rgba(217,119,6,.13)!important; color:#92400E!important; border-color:rgba(217,119,6,.32)!important; font-weight:600!important; }
+.sdg-13 { background:rgba(22,163,74,.13)!important; color:#166534!important; border-color:rgba(22,163,74,.32)!important; font-weight:600!important; }
+
+/* ── SECTION LABEL: more colorful per section ── */
+.section-label { letter-spacing:.16em; }
+#page-home .section-band .section-label { color:#2563EB; }
+#page-home .section-band .section-label::before { background:#2563EB; }
+#page-home .section-band .section-label::after  { background:#2563EB; animation-name:labelDotBlue; }
+@keyframes labelDotBlue { 0%,100%{opacity:1;}50%{opacity:.3;} }
+
+/* ── SECTION BAND: subtle color gradient ── */
+.section-band {
+  background: #FFFFFF !important;
+}
+.section-band::before {
+  background: linear-gradient(90deg,transparent,rgba(37,99,235,.28),rgba(22,163,74,.22),transparent) !important;
+}
+
+
+
+/* ── FOOTER GRADIENT LINE ── */
+footer::before {
+  background: linear-gradient(90deg,transparent,#16A34A,#2563EB,transparent) !important;
+  width: 200px !important;
+}
+
+/* ── LOADER: gradient ── */
+.loader-mark {
+  background: linear-gradient(135deg,#1A6B3C,#2563EB) !important;
+  box-shadow: 0 0 0 0 rgba(22,163,74,.4) !important;
+}
+
+/* ── HERO STATS BORDER BOTTOM: colored bars ── */
+.hstat { position: relative; }
+.hstat::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 16px; right: 16px;
+  height: 2px; border-radius: 2px;
+  opacity: 0; transition: opacity .25s;
+}
+.hstat:hover::after { opacity: 1; }
+.hstat:nth-child(1)::after { background: #16A34A; }
+.hstat:nth-child(2)::after { background: #2563EB; }
+.hstat:nth-child(3)::after { background: #C2410C; }
+.hstat:nth-child(4)::after { background: #0F766E; }
+
+/* ── CARDS: subtle colorful bg on hover ── */
+.card-energy   .card-icon:hover,
+.card-climate  .card-icon:hover,
+.card-causality .card-icon:hover,
+.card-forecast .card-icon:hover { transform: scale(1.12) rotate(-8deg); }
+
+/* ── BOUNCE animation on section headings ── */
+.section-title { animation: none; }
+
+
+.hero-orb-4 { width:350px; height:350px; background:radial-gradient(circle,rgba(124,58,237,.055),transparent 70%); bottom:25%; left:20%; animation-delay:-2s; }
+
+
+/* ═══ V6 — Neutral text & clean background ═══ */
+
+/* Body text strictly neutral dark */
+.card p, .mcard p, .section-lead,
+.irow p, .stat-block .sbl,
+.var-desc, .crow .cd, .person-card p { color: #374151 !important; }
+
+/* Muted labels neutral gray */
+.hstat-l, .stat-block .sbs, .var-src,
+.sdg-note, .vhint, .dash-header p,
+.loader-text { color: #6B7280 !important; }
+
+/* Infobox body text neutral */
+.infobox p, .fb p, .fb li { color: #374151 !important; }
+
+/* Stat numbers keep their accent colors (already set per-child) */
+
+/* About page: background truly white, not green-tinted */
+#page-about { background: #FAFAF8; }
+#page-dashboard { background: #FAFAF8; }
+
+/* Surface2 used in nav, table headers — truly neutral */
+.nav-inner { background: transparent; }
+.dtable-head, .ctable-head { background: #F9FAFB !important; }
+.drow:hover, .crow:hover { background: #F9FAFB !important; }
+
+/* Remove green tint from surface2 */
+.nt:hover { background: #F3F4F6 !important; }
+.nt.active { background: rgba(22,163,74,.09) !important; }
+
+/* Loader bg neutral */
+#loader { background: #FAFAF8 !important; }
+
+/* Section band border neutral + subtle */
+.section-band::before {
+  background: linear-gradient(90deg,transparent,rgba(22,163,74,.25),rgba(37,99,235,.2),transparent) !important;
+}
+
+/* Subnav pills neutral */
+.subnav-pill { background: #FFFFFF !important; }
+.subnav-pill:hover { background: rgba(22,163,74,.09) !important; }
+
+/* Card background neutral white, not green-tinted */
+.card, .mcard, .infobox, .fb, .person-card,
+.stat-block, .dtable-wrap, .ctable-wrap,
+.viz-shell, .dash-header, .hero-stats { background: #FFFFFF !important; }
+
+
+/* ═══ V7 — Stabilo OFF, JS color-reveal ON ═══ */
+.accent-energy::before, .accent-energy::after,
+.accent-climate::before, .accent-climate::after {
+  display: none !important;
+  content: none !important;
+  animation: none !important;
+}
+.accent-energy, .accent-climate {
+  padding: 0 !important;
+  position: static !important;
+  font-style: normal !important;
+  display: inline !important;
+  background: none !important;
+}
+
+</style>
+</head>
+<body class="lang-en">
+
+<!-- ── LOADER ── -->
+<div id="scroll-progress"></div>
+
+<div id="loader">
+  <div class="loader-mark">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M12 2L2 9.5V22h8v-6h4v6h8V9.5z"/></svg>
+  </div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+  <div class="loader-text">SIECCI · Loading</div>
+</div>
+
+<!-- ── CURSOR GLOW ── -->
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<!-- ── HERO BACKGROUND ORBS ── -->
+<div class="hero-bg">
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
+  <div class="hero-orb hero-orb-3"></div>
+  <div class="hero-orb hero-orb-4"></div>
+</div>
+
+<!-- ══ TOP NAV ══ -->
+<nav id="topnav">
+  <div class="nav-inner">
+    <div class="nav-brand" onclick="sp('home')"><img src="Logosiecci.png" alt="Logo" width="140" height="50">
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-tabs">
+      <button class="nt active" id="nt-home" onclick="sp('home')">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 8.5L9 2l7 6.5V16a1 1 0 01-1 1H3a1 1 0 01-1-1V8.5z"/><path d="M6 17v-6h6v6"/></svg>
+        <span data-en>Home</span><span data-id>Beranda</span>
+      </button>
+      <button class="nt" id="nt-dashboard" onclick="sp('dashboard')">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="2" width="6" height="6" rx="1"/><rect x="10" y="2" width="6" height="6" rx="1"/><rect x="2" y="10" width="6" height="6" rx="1"/><rect x="10" y="10" width="6" height="6" rx="1"/></svg>
+        Dashboard
+      </button>
+      <button class="nt" id="nt-about" onclick="sp('about')">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="6" r="3"/><path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+        <span data-en>About</span><span data-id>Tentang</span>
+      </button>
+    </div>
+    <div class="nav-right">
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" id="btn-id" onclick="setLang('id')">ID</button>
+      </div>
+      <button class="nav-cta" onclick="sp('dashboard')">Dashboard →</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════
+     HOME PAGE
+══════════════════════════════════════ -->
+<div id="page-home" class="page active">
+  <div class="hero">
+    <div class="hero-eyebrow">🇮🇩 <span data-en>Final Project · PENS 2026</span><span data-id>Proyek Akhir · PENS 2026</span></div>
+    <h1 class="hero-title">
+      <span data-en>Predictive Modeling &amp; Causality Analysis of<br><em class="accent-energy">Energy Consumption</em> and<br><em class="accent-climate">Climate Change</em> in Indonesia</span>
+      <span data-id>Pemodelan Prediktif dan Analisis Kausalitas pada<br><em class="accent-energy">Konsumsi Energi</em> dan<br><em class="accent-climate">Perubahan Iklim</em> di Indonesia</span>
+    </h1>
+    <p class="hero-subtitle">
+      <span data-en>Using Bayesian Vector AutoRegression (BVAR), Sequence-to-Sequence LSTM (Seq2Seq), and Holt Method for forecasting; Granger Causality Test and Transfer Entropy for causality analysis — presented through the interactive SIECCI dashboard powered by Tableau.</span>
+      <span data-id>Menggunakan Bayesian Vector AutoRegression (BVAR), Sequence-to-Sequence LSTM (Seq2Seq), dan Holt Method untuk peramalan; serta Uji Kausalitas Granger dan Transfer Entropy untuk analisis kausalitas — disajikan melalui dashboard interaktif SIECCI berbasis Tableau.</span>
+    </p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="sp('dashboard')">
+        <span data-en>Open Interactive Dashboard →</span>
+        <span data-id>Buka Dashboard Interaktif →</span>
+      </button>
+      <button class="btn-outline" onclick="openAcc('sec-latar')">
+        <span data-en>Read Background</span>
+        <span data-id>Baca Latar Belakang</span>
+      </button>
+    </div>
+    <div class="sdg-row">
+      <span class="sdg-pill sdg-7">SDGs 7 — <span data-en>Affordable &amp; Clean Energy</span><span data-id>Energi Bersih &amp; Terjangkau</span></span>
+      <span class="sdg-pill sdg-13">SDGs 13 — <span data-en>Climate Action</span><span data-id>Penanganan Perubahan Iklim</span></span>
+      <span class="sdg-note"><span data-en>Supporting Indonesia's sustainable development agenda</span><span data-id>Mendukung agenda pembangunan berkelanjutan Indonesia</span></span>
+    </div>
+    <div class="hero-stats">
+      <div class="hstat"><div class="hstat-n">34</div><div class="hstat-l"><span data-en>Years of Data<br>1990 – 2023</span><span data-id>Tahun Data<br>1990 – 2023</span></div></div>
+      <div class="hstat"><div class="hstat-n">13+</div><div class="hstat-l"><span data-en>Multivariate<br>Variables</span><span data-id>Variabel<br>Multivariat</span></div></div>
+      <div class="hstat"><div class="hstat-n">3</div><div class="hstat-l"><span data-en>Forecasting<br>Models</span><span data-id>Model<br>Peramalan</span></div></div>
+      <div class="hstat"><div class="hstat-n">2</div><div class="hstat-l"><span data-en>Causality<br>Methods</span><span data-id>Metode<br>Kausalitas</span></div></div>
+    </div>
+  </div>
+
+
+  <div class="section-band">
+    <div class="container">
+      <div class="section-label"><span data-en>Analytics Platform</span><span data-id>Platform Analitik</span></div>
+      <h2 class="section-title"><span data-en>About the SIECCI Dashboard</span><span data-id>Tentang Dashboard SIECCI</span></h2>
+      <p class="section-lead">
+        <span data-en>SIECCI (System for Indonesian Energy Consumption &amp; Climate Change Intelligence) is an interactive analytics dashboard built on Tableau, presenting predictive modeling and causality analysis between energy consumption and climate change in Indonesia.</span>
+        <span data-id>SIECCI (System for Indonesian Energy Consumption &amp; Climate Change Intelligence) adalah dashboard analitik interaktif berbasis Tableau yang menyajikan hasil pemodelan prediktif dan analisis kausalitas antara konsumsi energi dan perubahan iklim di Indonesia secara terpadu.</span>
+      </p>
+      <div class="card-grid rv">
+        <div class="card card-energy">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+          <h3><span data-en>Energy Consumption</span><span data-id>Konsumsi Energi</span></h3>
+          <p><span data-en>Explore energy consumption trends across industry, residential, and commercial sectors from 1990 to 2023, with 7-year forecasts using the best-performing models.</span><span data-id>Eksplorasi tren konsumsi energi sektor industri, rumah tangga, dan komersial dari 1990 hingga 2023, beserta proyeksi 7 tahun ke depan menggunakan model terbaik hasil komparasi.</span></p>
+        </div>
+        <div class="card card-climate">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/><line x1="8.5" y1="8" x2="11.5" y2="8"/><line x1="8.5" y1="11" x2="11.5" y2="11"/></svg></div>
+          <h3><span data-en>Climate Change</span><span data-id>Perubahan Iklim</span></h3>
+          <p><span data-en>Analysis of CO₂ emissions, Greenhouse Gas (GHG) emissions, and annual surface temperature anomalies in Indonesia — directly linked to energy consumption patterns via causality analysis.</span><span data-id>Analisis emisi CO₂, Gas Rumah Kaca (GRK), dan anomali suhu permukaan tahunan Indonesia — dikaitkan langsung dengan pola konsumsi energi melalui analisis kausalitas.</span></p>
+        </div>
+        <div class="card card-forecast">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg></div>
+          <h3><span data-en>Integrated Forecasting</span><span data-id>Peramalan Terpadu</span></h3>
+          <p><span data-en>Projections of energy consumption and climate indicators presented in one interactive visualization platform, accessible to a wide range of users.</span><span data-id>Proyeksi konsumsi energi dan indikator iklim disajikan dalam satu platform visualisasi interaktif yang mudah dioperasikan oleh berbagai kalangan pengguna.</span></p>
+        </div>
+        <div class="card card-causality">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="8.7" y1="10.7" x2="15.3" y2="7.3"/><line x1="8.7" y1="13.3" x2="15.3" y2="16.7"/></svg></div>
+          <h3><span data-en>Causality Analysis</span><span data-id>Analisis Kausalitas</span></h3>
+          <p><span data-en>Identifying causal relationships using Granger Causality (linear) and Transfer Entropy (nonlinear), uncovering complex dynamics between energy and climate.</span><span data-id>Identifikasi hubungan sebab-akibat menggunakan Uji Granger (linier) dan Transfer Entropy (non-linier), mengungkap dinamika kompleks antara energi dan iklim.</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DASHBOARD PAGE
+══════════════════════════════════════ -->
+<div id="page-dashboard" class="page">
+  <div class="dash-header">
+    <div class="dash-header-inner">
+      <h2>SIECCI Analytics Dashboard</h2>
+      <p><span data-en>Energy Consumption &amp; Climate Change in Indonesia — Data 1990 to 2030 Projection</span><span data-id>Konsumsi Energi &amp; Perubahan Iklim Indonesia — Data 1990 s.d. Proyeksi 2030</span></p>
+      <div class="dash-tag-row">
+        <span class="dtag dtag-g">● Live — Tableau Public</span>
+        <span class="dtag dtag-t">SIECCI / Energy1</span>
+        <span class="dtag dtag-m">1990 – 2030 Projection</span>
+        <span class="dtag dtag-m"><span data-en>Filter &amp; hover for interactive details</span><span data-id>Filter &amp; hover untuk detail interaktif</span></span>
+      </div>
+    </div>
+  </div>
+  <div class="dash-body">
+    <div class="viz-shell">
+      <div class="viz-header">
+        <div class="vdots"><div class="vd vd-r"></div><div class="vd vd-y"></div><div class="vd vd-g"></div></div>
+        <span class="vtl">SIECCI / Energy1 — Tableau Public Embed</span>
+        <span class="vhint"><span data-en>Use filters &amp; click for interactive data exploration</span><span data-id>Gunakan filter &amp; klik untuk eksplorasi data interaktif</span></span>
+      </div>
+      <div class="tableau-wrap">
+        <div class="tableauPlaceholder" id="viz1776824865732">
+          <noscript><a href="#"><img alt="Energy 1" src="https://public.tableau.com/static/images/SI/SIECCI/Energy1/1_rss.png" style="border:none"/></a></noscript>
+          <object class="tableauViz" style="display:none;width:1456px;height:820px;">
+            <param name="host_url" value="https%3A%2F%2Fpublic.tableau.com%2F"/>
+            <param name="embed_code_version" value="3"/>
+            <param name="site_root" value=""/>
+            <param name="name" value="SIECCI&#47;Energy1"/>
+            <param name="tabs" value="no"/>
+            <param name="toolbar" value="yes"/>
+            <param name="static_image" value="https://public.tableau.com/static/images/SI/SIECCI/Energy1/1.png"/>
+            <param name="animate_transition" value="yes"/>
+            <param name="display_static_image" value="yes"/>
+            <param name="display_spinner" value="yes"/>
+            <param name="display_overlay" value="yes"/>
+            <param name="display_count" value="yes"/>
+            <param name="language" value="en-US"/>
+            <param name="filter" value="publish=yes"/>
+          </object>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     ABOUT PAGE (all sub-sections inside)
+══════════════════════════════════════ -->
+<div id="page-about" class="page">
+  <div class="container">
+
+    <!-- ⑥ PROFIL -->
+    <div class="sub-section" id="sec-profil" style="border-top:none;padding-top:0;">
+      <div class="section-label"> 00 - <span data-en>About</span><span data-id>Tentang</span></div>
+      <h2 class="section-title"><span data-en>About the Project</span><span data-id>Tentang Proyek</span></h2>
+      <p class="section-lead">
+        <span data-en>Final project of D4 Applied Data Science, Politeknik Elektronika Negeri Surabaya — integrating predictive modeling, causality analysis, and an interactive dashboard in one unified SIECCI platform.</span>
+        <span data-id>Proyek akhir D4 Sains Data Terapan, Politeknik Elektronika Negeri Surabaya — mengintegrasikan pemodelan prediktif, analisis kausalitas, dan dashboard interaktif dalam satu platform SIECCI yang terpadu.</span>
+      </p>
+      <div class="two-col rv">
+        <div class="person-card">
+          <div class="pc-role"><span data-en>Student / Author</span><span data-id>Mahasiswa / Penulis</span></div>
+          <div class="pc-name">Maulana Ihsan Athallah</div>
+          <div class="pc-sub">NRP. 3322600012</div>
+          <p><span data-en>Responsible for the entire research process: data collection and preprocessing, implementation of BVAR, Seq2Seq LSTM, and Holt Method models, Granger and Transfer Entropy causality analysis, and development of the SIECCI analytics dashboard using Tableau Public.</span><span data-id>Bertanggung jawab atas keseluruhan proses penelitian: pengumpulan dan pra-pemrosesan data, implementasi model BVAR, Seq2Seq LSTM, dan Holt Method, analisis kausalitas Granger dan Transfer Entropy, serta pengembangan dashboard analitik SIECCI menggunakan Tableau Public.</span></p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:1.25rem;">
+          <div class="person-card">
+            <div class="pc-role"><span data-en>Supervisor I</span><span data-id>Dosen Pembimbing I</span></div>
+            <div class="pc-name" style="font-size:19px;">Ronny Susetyoko, S.Si., M.Si</div>
+            <div class="pc-sub">NIP. 197112111995011001</div>
+            <p><span data-en>Guidance on multivariate statistics, time series modeling, stationarity testing, and quantitative analysis validation.</span><span data-id>Bimbingan metodologis pada aspek statistika multivariat, pemodelan deret waktu, uji stasioneritas, dan validasi analisis kuantitatif penelitian.</span></p>
+          </div>
+          <div class="person-card">
+            <div class="pc-role"><span data-en>Supervisor II</span><span data-id>Dosen Pembimbing II</span></div>
+            <div class="pc-name" style="font-size:19px;">Alfi Fadliana, S.Si., M.Stat</div>
+            <div class="pc-sub">NIP. 199211252022032018</div>
+            <p><span data-en>Guidance on machine learning, deep learning modeling, hyperparameter optimization, and academic quality review of the research.</span><span data-id>Bimbingan pada aspek pemodelan machine learning, deep learning, optimasi hyperparameter, dan review kualitas akademik penelitian secara menyeluruh.</span></p>
+          </div>
+        </div>
+      </div>
+      <div class="infobox rv">
+        <div class="infobox-title"><span data-en>Project Information</span><span data-id>Informasi Proyek</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+          <div>
+            <div class="info-pair"><span class="info-key"><span data-en>Title</span><span data-id>Judul</span></span><span class="info-val"><span data-en>Predictive Modeling and Causality Analysis of Energy Consumption and Climate Change in Indonesia</span><span data-id>Pemodelan Prediktif dan Analisis Kausalitas pada Konsumsi Energi dan Perubahan Iklim di Indonesia</span></span></div>
+            <div class="info-pair"><span class="info-key"><span data-en>Study Program</span><span data-id>Program Studi</span></span><span class="info-val">D4 Applied Data Science</span></div>
+            <div class="info-pair"><span class="info-key"><span data-en>Department</span><span data-id>Jurusan</span></span><span class="info-val">Informatics &amp; Computer Engineering</span></div>
+            <div class="info-pair"><span class="info-key"><span data-en>Institution</span><span data-id>Institusi</span></span><span class="info-val">Politeknik Elektronika Negeri Surabaya (PENS)</span></div>
+            <div class="info-pair"><span class="info-key"><span data-en>Year</span><span data-id>Tahun</span></span><span class="info-val">2026</span></div>
+          </div>
+          <div>
+            <div class="info-pair"><span class="info-key"><span data-en>Main Methods</span><span data-id>Metode Utama</span></span><span class="info-val">BVAR, Seq2Seq LSTM, Holt Method (DES)</span></div>
+            <div class="info-pair"><span class="info-key"><span data-en>Causality</span><span data-id>Kausalitas</span></span><span class="info-val">Granger Causality Test, Transfer Entropy</span></div>
+            <div class="info-pair"><span class="info-key"><span data-en>Visualization</span><span data-id>Visualisasi</span></span><span class="info-val">Tableau Public — SIECCI Dashboard</span></div>
+            <div class="info-pair"><span class="info-key">Data Sources</span><span class="info-val">IEA, Our World in Data, IMF Climate Data</span></div>
+            <div class="info-pair"><span class="info-key"><span data-en>Data Period</span><span data-id>Periode Data</span></span><span class="info-val">1990 – 2023 (34 <span data-en>years</span><span data-id>tahun</span>, annual)</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="infobox rv" style="border-color:rgba(22,163,74,.2);background:rgba(22,163,74,.04);">
+        <div class="infobox-title forest"><span data-en>About the Name SIECCI</span><span data-id>Tentang Nama SIECCI</span></div>
+        <p style="font-size:14.5px;color:var(--text2);line-height:1.85;text-align:justify;">
+          <span data-en><strong style="color:var(--text);">SIECCI</strong> stands for <strong style="color:var(--forest);">S</strong>ystem for <strong style="color:var(--forest);">I</strong>ndonesian <strong style="color:var(--forest);">E</strong>nergy <strong style="color:var(--forest);">C</strong>onsumption &amp; <strong style="color:var(--forest);">C</strong>limate Change <strong style="color:var(--forest);">I</strong>ntelligence — a platform that not only presents data but also provides analytical intelligence to understand the complex interactions between energy consumption and climate change in Indonesia. It serves as a strategic, <em>evidence-based</em> tool for policymakers, researchers, and the general public in supporting SDGs 7 and SDGs 13 toward a cleaner and more sustainable Indonesia.</span>
+          <span data-id><strong style="color:var(--text);">SIECCI</strong> adalah singkatan dari <strong style="color:var(--forest);">S</strong>ystem for <strong style="color:var(--forest);">I</strong>ndonesian <strong style="color:var(--forest);">E</strong>nergy <strong style="color:var(--forest);">C</strong>onsumption &amp; <strong style="color:var(--forest);">C</strong>limate Change <strong style="color:var(--forest);">I</strong>ntelligence — sebuah platform yang tidak hanya menyajikan data, tetapi juga memberikan kecerdasan analitik untuk memahami interaksi kompleks antara konsumsi energi dan perubahan iklim di Indonesia. Platform ini hadir sebagai alat bantu strategis berbasis bukti bagi pengambil kebijakan, peneliti, dan masyarakat umum dalam mendukung pencapaian SDGs 7 dan SDGs 13.</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Research Details Accordion -->
+    <div style="margin-top:2.5rem;">
+      <div style="margin-bottom:1rem;">
+        <div class="section-label"><span data-en>Research Details</span><span data-id>Detail Penelitian</span></div>
+        <p style="font-size:13.5px;color:var(--muted);"><span data-en>Click any section below to expand</span><span data-id>Klik salah satu bagian di bawah untuk membuka</span></p>
+      </div>
+      <div class="about-subnav" style="margin-bottom:1.5rem;">
+        <a class="subnav-pill" onclick="toggleAcc('sec-latar')" id="pill-sec-latar">01 · <span data-en>Background</span><span data-id>Latar Belakang</span> <span class="pill-arrow">▾</span></a>
+        <a class="subnav-pill" onclick="toggleAcc('sec-masalah')" id="pill-sec-masalah">02 · <span data-en>Research Questions &amp; Objectives</span><span data-id>Rumusan &amp; Tujuan</span> <span class="pill-arrow">▾</span></a>
+        <a class="subnav-pill" onclick="toggleAcc('sec-data')" id="pill-sec-data">03 · <span data-en>Dataset</span><span data-id>Data</span> <span class="pill-arrow">▾</span></a>
+        <a class="subnav-pill" onclick="toggleAcc('sec-metode')" id="pill-sec-metode">04 · <span data-en>Methodology</span><span data-id>Metode</span> <span class="pill-arrow">▾</span></a>
+        <a class="subnav-pill" onclick="toggleAcc('sec-temuan')" id="pill-sec-temuan">05 · <span data-en>Findings</span><span data-id>Temuan</span> <span class="pill-arrow">▾</span></a>
+      </div>
+    </div>
+
+    <!-- ① LATAR BELAKANG -->
+    <div class="sub-section acc-section" id="sec-latar">
+      <div class="section-label">01 — <span data-en>Introduction</span><span data-id>Pendahuluan</span></div>
+      <h2 class="section-title"><span data-en>Background</span><span data-id>Latar Belakang</span></h2>
+      <p class="section-lead">
+        <span data-en>In the era of Industry 5.0, Indonesia's energy consumption continues to grow yet remains dominated by fossil fuels, while climate change phenomena become increasingly evident. A data-driven approach is urgently needed to project and capture the complex relationships between these dimensions.</span>
+        <span data-id>Dalam era revolusi industri 5.0, konsumsi energi Indonesia terus meningkat signifikan namun masih didominasi energi fosil, sementara fenomena perubahan iklim semakin nyata. Diperlukan pendekatan berbasis data yang mampu memproyeksikan dan menangkap hubungan kompleks antar dimensi ini.</span>
+      </p>
+      <div class="two-col-wide rv">
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <p style="font-size:14.5px;color:var(--text2);line-height:1.85;text-align:justify;">
+            <span data-en>Energy is a fundamental component of human life and national development. Nearly all activities — from individual to institutional scale — require various forms of energy, from electricity and liquid fuels to gas. Macroeconomically, a nation's economic growth can be gauged by its availability and utilization of energy across industry, commercial, and residential sectors.</span>
+            <span data-id>Energi merupakan komponen utama dalam aktivitas kehidupan dan pembangunan suatu negara. Hampir seluruh aktivitas manusia, baik dalam skala individu maupun kelembagaan membutuhkan berbagai macam energi — mulai dari listrik, bahan bakar cair, hingga gas. Secara makro, pertumbuhan ekonomi suatu negara dapat dilihat dari ketersediaan dan pemanfaatan energi di berbagai sektor antara lain industri, komersial, dan rumah tangga.</span>
+          </p>
+          <p style="font-size:14.5px;color:var(--text2);line-height:1.85;text-align:justify;">
+            <span data-en>Indonesia's energy consumption since 2010 has shown a fluctuating trend — rising from 1,738,335 TWh in 2010 to 2,299,630 TWh in 2019, temporarily declining due to the pandemic, then surging again post-2021 to reach 2,807,733 TWh in 2023 — still dominated by fossil fuels.</span>
+            <span data-id>Konsumsi energi Indonesia sejak 2010 menunjukkan tren fluktuatif — dari 1.738.335 TWh pada 2010 meningkat menjadi 2.299.630 TWh pada 2019, sempat menurun akibat pandemi, lalu kembali naik signifikan pasca-2021 hingga mencapai 2.807.733 TWh pada 2023. Namun, konsumsi ini masih didominasi energi fosil yang belum ramah lingkungan.</span>
+          </p>
+          <p style="font-size:14.5px;color:var(--text2);line-height:1.85;text-align:justify;">
+            <span data-en>BMKG data shows an average temperature increase of 1.02 °C over 1981–2024 (0.23 °C per decade). Indonesia's CO₂ emissions from fossil fuels rose 13.14% in 2022 to 692 million tonnes, while global CO₂ emissions reached a record 36.8 gigatonnes.</span>
+            <span data-id>Data BMKG menunjukkan kenaikan suhu rata-rata sebesar 1,02 °C selama 1981–2024 atau setara 0,23 °C per dekade. Emisi CO₂ dari bahan bakar fosil di Indonesia naik 13,14% pada 2022 menjadi 692 juta ton, sementara emisi CO₂ global mencapai 36,8 gigaton — rekor tertinggi sepanjang sejarah.</span>
+          </p>
+          <p style="font-size:14.5px;color:var(--text2);line-height:1.85;text-align:justify;">
+            <span data-en>As part of its SDGs commitment, Indonesia has adopted SDGs 7 (affordable and clean energy) and SDGs 13 (climate action). This is where data-driven predictive modeling and causality analysis become essential for generating adaptive, evidence-based policies.</span>
+            <span data-id>Sebagai komitmen terhadap SDGs, Indonesia telah mengadopsi SDGs 7 (energi bersih dan terjangkau) dan SDGs 13 (penanganan perubahan iklim). Di sinilah pendekatan prediktif berbasis data dan analisis kausalitas dibutuhkan untuk menghasilkan evidence-based policy yang lebih adaptif dan responsif.</span>
+          </p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <div class="stat-block"><div class="sbn">2,807,733 TWh</div><div class="sbl"><span data-en>Total Indonesia Energy Consumption (2023) — up from 1,738,335 TWh in 2010</span><span data-id>Total Konsumsi Energi Indonesia (2023) — naik dari 1.738.335 TWh pada 2010</span></div><div class="sbs">Source: Our World in Data / IEA</div></div>
+          <div class="stat-block teal"><div class="sbn">+1.02 °C</div><div class="sbl"><span data-en>Average surface temperature increase in Indonesia 1981–2024 (0.23 °C/decade)</span><span data-id>Kenaikan suhu permukaan rata-rata Indonesia selama 1981–2024 (0,23 °C/dekade)</span></div><div class="sbs">Source: BMKG</div></div>
+          <div class="stat-block rust"><div class="sbn">692 Mt CO₂</div><div class="sbl"><span data-en>CO₂ emissions from fossil fuels in Indonesia (2022) — up 13.14%</span><span data-id>Emisi CO₂ dari bahan bakar fosil Indonesia (2022) — naik 13,14%</span></div><div class="sbs">Source: Worldometers</div></div>
+          <div class="stat-block ocean"><div class="sbn">36.8 Gt</div><div class="sbl"><span data-en>Global CO₂ emissions (2022) — all-time record, +0.5 Gt from 2021</span><span data-id>Emisi CO₂ global (2022) — rekor tertinggi sepanjang sejarah, naik 0,5 Gt dari 2021</span></div><div class="sbs">Source: IEA, 2023</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② RUMUSAN & TUJUAN -->
+    <div class="sub-section acc-section" id="sec-masalah">
+      <div class="section-label">02 — <span data-en>Introduction</span><span data-id>Pendahuluan</span></div>
+      <h2 class="section-title"><span data-en>Research Questions &amp; Objectives</span><span data-id>Rumusan Masalah &amp; Tujuan</span></h2>
+      <p class="section-lead">
+        <span data-en>This study formulates three core research questions addressed through an integrated analytical approach — from predictive modeling and causality analysis to the development of an interactive visualization platform.</span>
+        <span data-id>Penelitian ini merumuskan tiga permasalahan inti yang dijawab melalui pendekatan analitik terintegrasi — dari pemodelan prediktif dan analisis kausalitas hingga pengembangan platform visualisasi interaktif berbasis Tableau.</span>
+      </p>
+      <div class="two-col rv">
+        <div class="infobox" style="margin-bottom:0;">
+          <div class="infobox-title rust"><span data-en>Research Questions</span><span data-id>Rumusan Masalah</span></div>
+          <div class="irow"><div class="inum">1</div><p><span data-en>What are the in-depth growth patterns of energy consumption in Indonesia, particularly across the industrial, residential, and commercial sectors?</span><span data-id>Bagaimana pola pertumbuhan konsumsi energi di Indonesia secara mendalam, khususnya untuk sektor industri, rumah tangga, dan komersial?</span></p></div>
+          <div class="irow"><div class="inum">2</div><p><span data-en>What is the quantitative relationship between energy consumption and climate change in Indonesia, including the direction and intensity of influence between them?</span><span data-id>Bagaimana keterkaitan kuantitatif antara konsumsi energi dan perubahan iklim di Indonesia, termasuk arah dan intensitas pengaruh di antara keduanya?</span></p></div>
+          <div class="irow"><div class="inum">3</div><p><span data-en>How can an interactive analytics platform be built that presents the energy-climate linkage in an integrated manner, specifically supporting SDGs 7 and SDGs 13?</span><span data-id>Bagaimana membangun platform analitik interaktif yang menyajikan keterkaitan energi-iklim secara terpadu untuk mendukung SDGs 7 dan SDGs 13?</span></p></div>
+        </div>
+        <div class="infobox" style="margin-bottom:0;">
+          <div class="infobox-title"><span data-en>Research Objectives</span><span data-id>Tujuan Penelitian</span></div>
+          <div class="irow"><div class="inum teal">1</div><p><span data-en>Perform predictive modeling of energy consumption in industrial, household, and commercial sectors, as well as climate change indicators, using Bayesian Vector AutoRegression (BVAR), Sequence-to-Sequence (Seq2Seq), and Holt Method.</span><span data-id>Melakukan pemodelan prediktif terhadap konsumsi energi sektor industri, rumah tangga, dan komersial serta indikator perubahan iklim menggunakan metode Bayesian Vector AutoRegression (BVAR), Sequence-to-Sequence (Seq2Seq), dan Holt.</span></p></div>
+          <div class="irow"><div class="inum teal">2</div><p><span data-en>Analyze the causal relationships between energy consumption and climate change using Granger Causality Test and Transfer Entropy.</span><span data-id>Menganalisis hubungan kausalitas antara konsumsi energi terhadap perubahan iklim menggunakan Uji Kausalitas Granger dan Transfer Entropy.</span></p></div>
+          <div class="irow"><div class="inum teal">3</div><p><span data-en>Develop an interactive analytics dashboard using Tableau as a tool for monitoring energy consumption and climate change in Indonesia.</span><span data-id>Mengembangkan dashboard analitik menggunakan Tableau sebagai alat bantu monitoring konsumsi energi dan perubahan iklim di Indonesia.</span></p></div>
+        </div>
+      </div>
+      <div class="infobox rv">
+        <div class="infobox-title ocean"><span data-en>Research Benefits</span><span data-id>Manfaat Penelitian</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem;">
+          <div>
+            <div class="tag tag-f" style="margin-bottom:.75rem;"><span data-en>For the Author</span><span data-id>Bagi Penulis</span></div>
+            <div class="irow"><div class="idot"></div><p><span data-en>Deepen understanding of predictive and causality methods for energy and environmental data analysis.</span><span data-id>Meningkatkan pemahaman dalam penerapan metode prediktif dan kausalitas untuk analisis data energi dan lingkungan.</span></p></div>
+            <div class="irow"><div class="idot"></div><p><span data-en>Develop skills in building comprehensive data-driven analytics information systems.</span><span data-id>Mengembangkan keterampilan membangun sistem informasi analitik berbasis data secara komprehensif.</span></p></div>
+          </div>
+          <div>
+            <div class="tag tag-t" style="margin-bottom:.75rem;"><span data-en>For the Government</span><span data-id>Bagi Pemerintah</span></div>
+            <div class="irow"><div class="idot teal"></div><p><span data-en>A data-driven tool for ESDM, KLHK, and Bappenas agencies to formulate, monitor, and evaluate SDGs 7 &amp; 13 policies.</span><span data-id>Alat bantu berbasis data bagi instansi ESDM, KLHK, dan Bappenas dalam merumuskan, memantau, dan mengevaluasi kebijakan SDGs 7 &amp; 13.</span></p></div>
+            <div class="irow"><div class="idot teal"></div><p><span data-en>Supports more targeted decision-making through informative data visualization and accurate predictions.</span><span data-id>Mendukung pengambilan keputusan yang lebih tepat sasaran melalui visualisasi data yang informatif dan prediksi yang akurat.</span></p></div>
+          </div>
+          <div>
+            <div class="tag tag-o" style="margin-bottom:.75rem;"><span data-en>For the Public</span><span data-id>Bagi Masyarakat Umum</span></div>
+            <div class="irow"><div class="idot ocean"></div><p><span data-en>Provides integrated energy consumption and climate change information transparently and accessibly to the public.</span><span data-id>Tersedia informasi konsumsi energi dan perubahan iklim terintegrasi secara transparan dan mudah diakses oleh publik.</span></p></div>
+            <div class="irow"><div class="idot ocean"></div><p><span data-en>Raises public literacy on energy efficiency and climate change awareness in Indonesia.</span><span data-id>Meningkatkan literasi masyarakat mengenai efisiensi energi dan kesadaran terhadap isu perubahan iklim di Indonesia.</span></p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ DATA -->
+    <div class="sub-section acc-section" id="sec-data">
+      <div class="section-label">03 — Dataset</div>
+      <h2 class="section-title"><span data-en>Research Dataset Structure</span><span data-id>Struktur Data Penelitian</span></h2>
+      <p class="section-lead">
+        <span data-en>Annual time-series data (1990–2023) split into two groups: energy consumption per sector (13 variables) and climate change indicators (3 variables), sourced from IEA, Our World in Data, and IMF Climate Change Data.</span>
+        <span data-id>Data bersifat deret waktu tahunan (1990–2023) terbagi dalam dua kelompok: data konsumsi energi per sektor (13 variabel) dan data indikator perubahan iklim (3 variabel), bersumber dari IEA, Our World in Data, dan IMF Climate Change Data.</span>
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem;">
+        <span class="tag tag-f"><span data-en>Energy Consumption — 13 variables</span><span data-id>Konsumsi Energi — 13 variabel</span></span>
+        <span class="tag tag-t"><span data-en>Climate Change — 3 variables</span><span data-id>Perubahan Iklim — 3 variabel</span></span>
+        <span class="tag tag-m"><span data-en>Period: 1990–2023 (34 years)</span><span data-id>Periode: 1990–2023 (34 tahun)</span></span>
+      </div>
+      <div class="dtable-wrap rv">
+        <div class="dtable-head"><span>Code</span><span>Variable</span><span><span data-en>Description</span><span data-id>Deskripsi</span></span><span><span data-en>Source</span><span data-id>Sumber</span></span><span>Unit</span></div>
+        <div class="drow"><div><span class="var-code">x1</span></div><div class="var-name">Ind_Coal</div><div class="var-desc"><span data-en>Coal &amp; coal product consumption — industrial sector</span><span data-id>Konsumsi batubara &amp; produk batubara sektor industri</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x2</span></div><div class="var-name">Ind_Natural_gas</div><div class="var-desc"><span data-en>Natural gas consumption — industrial sector</span><span data-id>Konsumsi gas alam sektor industri</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x3</span></div><div class="var-name">Ind_Oil</div><div class="var-desc"><span data-en>Oil &amp; oil products consumption — industrial sector</span><span data-id>Konsumsi minyak &amp; produk minyak sektor industri</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x4</span></div><div class="var-name">Ind_Biofuels</div><div class="var-desc"><span data-en>Biofuels &amp; waste consumption — industrial sector</span><span data-id>Konsumsi biofuel &amp; limbah sektor industri</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x5</span></div><div class="var-name">Ind_Electricity</div><div class="var-desc"><span data-en>Electricity consumption — industrial sector</span><span data-id>Konsumsi listrik sektor industri</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x6</span></div><div class="var-name"><span data-en>HH_Oil</span><span data-id>RT_Oil</span></div><div class="var-desc"><span data-en>HH_Oil — oil product consumption, residential sector</span><span data-id>Konsumsi minyak produk sektor rumah tangga (RT_Oil)</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x7</span></div><div class="var-name"><span data-en>HH_Natural_gas</span><span data-id>RT_Natural_gas</span></div><div class="var-desc"><span data-en>HH_Natural_gas — natural gas consumption, residential sector</span><span data-id>Konsumsi gas alam sektor rumah tangga (RT_Natural_gas)</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x8</span></div><div class="var-name"><span data-en>HH_Biofuels</span><span data-id>RT_Biofuels</span></div><div class="var-desc"><span data-en>HH_Biofuels — biofuels &amp; waste consumption, residential sector</span><span data-id>Konsumsi biofuel &amp; limbah sektor rumah tangga (RT_Biofuels)</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x9</span></div><div class="var-name"><span data-en>HH_Electricity</span><span data-id>RT_Electricity</span></div><div class="var-desc"><span data-en>HH_Electricity — electricity consumption, residential sector</span><span data-id>Konsumsi listrik sektor rumah tangga (RT_Electricity)</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x10</span></div><div class="var-name"><span data-en>Com_Oil</span><span data-id>Kom_Oil</span></div><div class="var-desc"><span data-en>Oil consumption — commercial sector</span><span data-id>Konsumsi minyak sektor komersial</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x11</span></div><div class="var-name"><span data-en>Com_Biofuels</span><span data-id>Kom_Biofuels</span></div><div class="var-desc"><span data-en>Biofuels &amp; waste — commercial sector</span><span data-id>Konsumsi biofuel &amp; limbah sektor komersial</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x12</span></div><div class="var-name"><span data-en>Com_Natural_gas</span><span data-id>Kom_Natural_gas</span></div><div class="var-desc"><span data-en>Natural gas — commercial sector</span><span data-id>Konsumsi gas alam sektor komersial</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow"><div><span class="var-code">x13</span></div><div class="var-name"><span data-en>Com_Electricity</span><span data-id>Kom_Electricity</span></div><div class="var-desc"><span data-en>Electricity — commercial sector</span><span data-id>Konsumsi listrik sektor komersial</span></div><div class="var-src">IEA (sumber utama)</div><div><span class="tag tag-f">TJ</span></div></div>
+        <div class="drow iklim"><div><span class="var-code teal">y1</span></div><div class="var-name teal">Emission_CO₂</div><div class="var-desc"><span data-en>Annual CO₂ emissions — Indonesia</span><span data-id>Emisi karbon dioksida tahunan Indonesia</span></div><div class="var-src">Our World in Data</div><div><span class="tag tag-t">Tonnes</span></div></div>
+        <div class="drow iklim"><div><span class="var-code teal">y2</span></div><div class="var-name teal">Emission_GRK</div><div class="var-desc"><span data-en>Greenhouse Gas emissions (CO₂ equivalents)</span><span data-id>Emisi gas rumah kaca (CO₂ equivalents)</span></div><div class="var-src">Our World in Data</div><div><span class="tag tag-t">Tonnes</span></div></div>
+        <div class="drow iklim"><div><span class="var-code teal">y3</span></div><div class="var-name teal">Temperature</div><div class="var-desc"><span data-en>Annual surface temperature anomaly — Indonesia</span><span data-id>Anomali suhu permukaan tahunan Indonesia</span></div><div class="var-src">IMF Climate Change Data</div><div><span class="tag tag-t">°C</span></div></div>
+      </div>
+    </div>
+
+    <!-- ④ METODE -->
+    <div class="sub-section acc-section" id="sec-metode">
+      <div class="section-label">04 — <span data-en>Methodology</span><span data-id>Metodologi</span></div>
+      <h2 class="section-title"><span data-en>Research Methodology</span><span data-id>Metode Penelitian</span></h2>
+      <p class="section-lead">
+        <span data-en>A combination of multivariate predictive and causality analysis approaches to generate a comprehensive picture of the dynamic relationship between energy consumption and climate change in Indonesia.</span>
+        <span data-id>Kombinasi pendekatan prediktif multivariat dan analisis kausalitas untuk menghasilkan gambaran komprehensif dinamika hubungan konsumsi energi dan perubahan iklim di Indonesia beserta proyeksi masa depannya.</span>
+      </p>
+      <div class="method-grid rv">
+        <div class="mcard">
+          <div class="mc-num">01</div>
+          <div class="mc-tag"><span data-en>Forecasting · Multivariate</span><span data-id>Peramalan · Multivariat</span></div>
+          <h3>Bayesian Vector AutoRegression</h3>
+          <p><span data-en>BVAR model with Minnesota Prior and Gibbs Sampling (12,000 draws, 7,000 burn-in). Captures dynamic inter-variable relationships with high stability even with limited observations. Best for Temperature and Emission_GRK forecasting.</span><span data-id>Model BVAR dengan Minnesota Prior dan Gibbs Sampling (12.000 draws, 7.000 burn-in). Mampu menangkap hubungan dinamis antar variabel dengan stabilitas tinggi meski observasi terbatas. Unggul untuk peramalan Temperature dan Emission_GRK.</span></p>
+          <span class="mc-badge">BVAR — Minnesota Prior</span>
+        </div>
+        <div class="mcard ocean">
+          <div class="mc-num">02</div>
+          <div class="mc-tag"><span data-en>Forecasting · Deep Learning</span><span data-id>Peramalan · Deep Learning</span></div>
+          <h3>Sequence-to-Sequence LSTM</h3>
+          <p><span data-en>Encoder-decoder LSTM architecture for non-linear temporal patterns. Hyperparameters optimized using Optuna (128 units, tanh, lr=0.001, batch=8). Best model for Emission_CO₂ forecasting with MAPE 10.57%.</span><span data-id>Arsitektur encoder-decoder berbasis LSTM untuk pola temporal non-linear. Hyperparameter dioptimasi menggunakan Optuna (128 units, tanh, lr=0.001, batch=8). Terbukti paling optimal untuk peramalan Emission_CO₂ dengan MAPE 10,57%.</span></p>
+          <span class="mc-badge">Seq2Seq + Optuna Tuning</span>
+        </div>
+        <div class="mcard">
+          <div class="mc-num">03</div>
+          <div class="mc-tag"><span data-en>Forecasting · Benchmark</span><span data-id>Peramalan · Benchmark</span></div>
+          <h3>Double Exponential Smoothing</h3>
+          <p><span data-en>Holt Method capturing level and trend components adaptively. Parameters optimized via Grid Search (α, β: 0.01–0.99). Consistently best model (lowest MAE) across all 13 annual energy consumption variables.</span><span data-id>Metode Holt yang menangkap komponen level dan tren secara adaptif. Parameter dioptimasi via Grid Search (α, β: 0.01–0.99). Konsisten terbaik (MAE terendah) pada seluruh 13 variabel konsumsi energi tahunan.</span></p>
+          <span class="mc-badge">Holt Method + Grid Search</span>
+        </div>
+        <div class="mcard teal">
+          <div class="mc-num">04</div>
+          <div class="mc-tag"><span data-en>Causality · Linear</span><span data-id>Kausalitas · Linier</span></div>
+          <h3>Granger Causality Test</h3>
+          <p><span data-en>Statistical hypothesis test for the direction of linear causal influence between time-series variables. Tested at lags 1–5 with significance level α=10%. Identifies more causal pairs than Transfer Entropy.</span><span data-id>Pengujian hipotesis statistik untuk arah pengaruh kausalitas linier antar variabel deret waktu. Diuji pada lag 1–5 dengan tingkat signifikansi α=10%. Mengidentifikasi lebih banyak hubungan kausal dibanding Transfer Entropy.</span></p>
+          <span class="mc-badge">F-Statistic, p-value ≤ 0.10</span>
+        </div>
+        <div class="mcard teal">
+          <div class="mc-num">05</div>
+          <div class="mc-tag"><span data-en>Causality · Non-linear</span><span data-id>Kausalitas · Non-linier</span></div>
+          <h3>Transfer Entropy</h3>
+          <p><span data-en>Information-theoretic method based on Shannon Entropy to detect non-linear information flow between variables. Reveals relationships undetected by Granger — especially temperature's influence on natural gas consumption.</span><span data-id>Metode information-theoretic berbasis Shannon Entropy untuk mendeteksi aliran informasi non-linear antar variabel. Mengungkap hubungan yang tidak terdeteksi Granger, khususnya pengaruh suhu pada konsumsi gas alam.</span></p>
+          <span class="mc-badge">Shuffle Test, TE Value</span>
+        </div>
+        <div class="mcard">
+          <div class="mc-num">06</div>
+          <div class="mc-tag"><span data-en>Model Evaluation</span><span data-id>Evaluasi · Model</span></div>
+          <h3>MAE / RMSE / MAPE</h3>
+          <p><span data-en>Three complementary evaluation metrics: MAE as the basis for model comparison, RMSE sensitive to outliers, MAPE as an intuitive percentage error for cross-model comparison.</span><span data-id>Tiga metrik evaluasi komplementer: MAE sebagai basis komparasi, RMSE sensitif terhadap outlier, MAPE dalam persentase untuk perbandingan antar model yang intuitif dan mudah diinterpretasi.</span></p>
+          <span class="mc-badge"><span data-en>3-Model Comparison</span><span data-id>Komparasi 3 Model</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ TEMUAN -->
+    <div class="sub-section acc-section" id="sec-temuan">
+      <div class="section-label">05 — <span data-en>Results &amp; Analysis</span><span data-id>Hasil &amp; Analisis</span></div>
+      <h2 class="section-title"><span data-en>Research Findings</span><span data-id>Temuan Penelitian</span></h2>
+      <p class="section-lead">
+        <span data-en>Experimental results show Holt Method consistently outperforms for energy consumption, while BVAR and Seq2Seq LSTM complement for climate data. Causality analysis reveals significant bidirectional relationships between energy consumption and climate change.</span>
+        <span data-id>Hasil eksperimen menunjukkan Holt Method unggul konsisten untuk konsumsi energi, BVAR dan Seq2Seq LSTM melengkapi untuk data iklim, serta analisis kausalitas mengungkap hubungan dua arah yang signifikan antara konsumsi energi dan perubahan iklim.</span>
+      </p>
+      <div class="section-label" style="margin-bottom:.75rem;"><span data-en>Model Comparison — Energy Consumption</span><span data-id>Komparasi Model — Konsumsi Energi</span></div>
+      <div class="ctable-wrap rv">
+        <div class="ctable-head c4"><span><span data-en>Variable</span><span data-id>Variabel</span></span><span><span data-en>Best Model</span><span data-id>Model Terbaik</span></span><span>MAE</span><span><span data-en>Notes</span><span data-id>Keterangan</span></span></div>
+        <div class="crow c4 winner"><div class="cn">Ind_Electricity ★</div><div><span class="tag tag-f">Holt</span></div><div class="cm">21,494</div><div class="cd">MAPE 4.50% — lowest MAE, best in class</div></div>
+        <div class="crow c4"><div class="cn">Ind_Coal</div><div><span class="tag tag-f">Holt</span></div><div class="cm">34,196</div><div class="cd"><span data-en>Far better than BVAR (121,623) &amp; LSTM (280,201)</span><span data-id>Jauh lebih baik dari BVAR (121.623) &amp; LSTM (280.201)</span></div></div>
+        <div class="crow c4"><div class="cn"><span data-en>HH_Natural_gas</span><span data-id>RT_Natural_gas</span></div><div><span class="tag tag-f">Holt</span></div><div class="cm">196</div><div class="cd"><span data-en>Absolute lowest MAE across all energy variables</span><span data-id>MAE terendah mutlak di seluruh variabel energi</span></div></div>
+        <div class="crow c4"><div class="cn"><span data-en>HH_Oil &amp; HH_Biofuels</span><span data-id>RT_Oil &amp; RT_Biofuels</span></div><div><span class="tag tag-f">Holt</span></div><div class="cm">3,430 / 5,729</div><div class="cd"><span data-en>Consistently outperforms BVAR and Seq2Seq LSTM</span><span data-id>Konsisten unggul atas BVAR dan Seq2Seq LSTM</span></div></div>
+        <div class="crow c4"><div class="cn"><span data-en>Com_Electricity</span><span data-id>Kom_Electricity</span></div><div><span class="tag tag-f">Holt</span></div><div class="cm">11,354</div><div class="cd">MAPE 4.78% — <span data-en>stable across commercial sector</span><span data-id>stabil di seluruh sektor komersial</span></div></div>
+      </div>
+      <div class="section-label" style="margin-bottom:.75rem;margin-top:2rem;"><span data-en>Model Comparison — Climate Change</span><span data-id>Komparasi Model — Perubahan Iklim</span></div>
+      <div class="ctable-wrap rv">
+        <div class="ctable-head c3"><span><span data-en>Variable</span><span data-id>Variabel</span></span><span><span data-en>Best Model</span><span data-id>Model Terbaik</span></span><span><span data-en>Results &amp; Notes</span><span data-id>Hasil &amp; Keterangan</span></span></div>
+        <div class="crow c3 winner"><div class="cn">Temperature ★</div><div><span class="tag tag-t">BVAR</span></div><div class="cd">MAE 0.11 — MAPE 10.95%; Seq2Seq LSTM MAPE very high (41.83%)</div></div>
+        <div class="crow c3 winner"><div class="cn">Emission_CO₂ ★</div><div><span class="tag tag-o">Seq2Seq LSTM</span></div><div class="cd">MAE 73,063,336 — MAPE 10.57%; better than BVAR (MAE 91,239,503)</div></div>
+        <div class="crow c3 winner"><div class="cn">Emission_GRK ★</div><div><span class="tag tag-t">BVAR</span></div><div class="cd">MAPE 10.64% — <span data-en>stable on consistently patterned GRK data</span><span data-id>stabil pada data GRK yang berpola konsisten</span></div></div>
+      </div>
+      <div class="two-col rv" style="margin-top:2rem;">
+        <div class="fb">
+          <h3>Granger Causality Test</h3>
+          <div class="irow"><div class="idot"></div><p><strong>Ind_Electricity → Emission_CO₂</strong> lag 1 (F=12.39, p=0.0014) — <span data-en>industrial electricity consumption is the strongest causal predictor of carbon emissions.</span><span data-id>konsumsi listrik industri adalah prediktor kausal terkuat emisi karbon.</span></p></div>
+          <div class="irow"><div class="idot"></div><p><strong>Ind_Electricity → Emission_CO₂</strong> lag 2 (F=8.38, p=0.0016) — <span data-en>causal relationship persists up to 2-year lag.</span><span data-id>hubungan kausal bertahan hingga lag 2 tahun.</span></p></div>
+          <div class="irow"><div class="idot"></div><p><strong>Emission_CO₂ → <span data-en>HH_Natural_gas</span><span data-id>RT_Natural_gas</span></strong> lag 5 (F=4.78, p=0.0066) — <span data-en>CO₂ emissions influence residential natural gas consumption in the long run.</span><span data-id>emisi CO₂ berpengaruh terhadap konsumsi gas alam rumah tangga jangka panjang.</span></p></div>
+          <div class="irow"><div class="idot"></div><p><strong>Emission_GRK → <span data-en>Com_Biofuels</span><span data-id>Kom_Biofuels</span></strong> lag 5 (F=4.09, p=0.0128) — <span data-en>GRK emissions consistently influence commercial biofuel consumption.</span><span data-id>emisi GRK mempengaruhi konsumsi biofuel komersial secara konsisten.</span></p></div>
+          <div class="irow"><div class="idot"></div><p><strong><span data-en>HH_Biofuels</span><span data-id>RT_Biofuels</span> → Temperature</strong> lag 2 (F=5.13, p=0.0132) — <span data-en>demonstrates an energy-climate feedback loop mechanism.</span><span data-id>menunjukkan mekanisme umpan balik (feedback loop) energi-iklim.</span></p></div>
+        </div>
+        <div class="fb">
+          <h3>Transfer Entropy</h3>
+          <div class="irow"><div class="idot teal"></div><p><strong>Temperature → Ind_Natural_gas</strong> lag 1 (TE=0.77, p=0.00) — <span data-en>temperature change's influence on industrial gas consumption is strongest.</span><span data-id>pengaruh perubahan suhu terhadap konsumsi gas industri paling kuat.</span></p></div>
+          <div class="irow"><div class="idot teal"></div><p><strong>Temperature → <span data-en>HH_Natural_gas</span><span data-id>RT_Natural_gas</span></strong> lag 1 (TE=0.76, p=0.01) — <span data-en>temperature non-linearly influences residential natural gas consumption.</span><span data-id>suhu mempengaruhi konsumsi gas alam rumah tangga secara non-linear.</span></p></div>
+          <div class="irow"><div class="idot teal"></div><p><strong>Ind_Coal → Emission_CO₂</strong> lag 1 (TE=0.51, p=0.08) — <span data-en>information flow from coal consumption to carbon emissions detected.</span><span data-id>aliran informasi dari konsumsi batubara ke emisi karbon terdeteksi.</span></p></div>
+          <div class="irow"><div class="idot teal"></div><p><strong>Ind_Oil → Emission_GRK</strong> lag 2 (TE=0.76, p=0.08) — <span data-en>industrial oil consumption flows information to GHG emissions.</span><span data-id>konsumsi minyak industri mengalirkan informasi ke emisi GRK.</span></p></div>
+          <div class="irow"><div class="idot teal"></div><p><span data-en>Non-linear relationships undetected by Granger are confirmed by Transfer Entropy, revealing <strong>complex energy-climate dynamics</strong>.</span><span data-id>Hubungan non-linier yang tidak terdeteksi Granger terkonfirmasi Transfer Entropy, menunjukkan <strong>dinamika energi-iklim yang kompleks</strong>.</span></p></div>
+        </div>
+      </div>
+      <div class="infobox rv" style="border-color:rgba(22,163,74,.2);background:rgba(22,163,74,.06);margin-top:1.5rem;">
+        <div class="infobox-title forest"><span data-en>Main Conclusion</span><span data-id>Kesimpulan Utama</span></div>
+        <p style="font-size:14.5px;color:var(--text2);line-height:1.85;text-align:justify;">
+          <span data-en>This research successfully achieved all stated objectives. <strong>Holt Method</strong> proved consistently best for all energy consumption variables, with the lowest MAPE of 4.50%. <strong>BVAR</strong> excels for Temperature and Emission_GRK, while <strong>Seq2Seq LSTM</strong> is optimal for Emission_CO₂ (MAPE 10.57%). Causality analysis confirms <strong>bidirectional relationships</strong> that are not only linear but also involve complex non-linear dynamics between energy consumption and climate change in Indonesia.</span>
+          <span data-id>Penelitian ini berhasil mencapai seluruh tujuan yang dirumuskan. Model <strong>Holt Method</strong> terbukti konsisten sebagai model terbaik untuk peramalan seluruh variabel konsumsi energi, dengan MAPE terendah sebesar 4,50%. <strong>BVAR</strong> unggul untuk Temperature dan Emission_GRK, sementara <strong>Seq2Seq LSTM</strong> optimal untuk Emission_CO₂ (MAPE 10,57%). Analisis kausalitas mengkonfirmasi adanya <strong>hubungan dua arah</strong> yang tidak hanya bersifat linier tetapi juga melibatkan dinamika non-linear yang kompleks antara konsumsi energi dan perubahan iklim di Indonesia.</span>
+        </p>
+      </div>
+    </div>
+
+
+
+  </div><!-- end container -->
+</div><!-- end page-about -->
+
+<footer>
+  <p>© 2026 SIECCI — Predictive Modeling and Causality Analysis of Energy Consumption and Climate Change in Indonesia</p>
+  <p style="margin-top:.4rem;font-size:11.5px;opacity:.7;">Applied Data Science · Politeknik Elektronika Negeri Surabaya · Powered by Tableau Public</p>
+</footer>
+
+<script>
+// ── Loader
+window.addEventListener('load', () => {
+  setTimeout(() => document.getElementById('loader').classList.add('hidden'), 1300);
+});
+
+// ── Scroll progress bar
+window.addEventListener('scroll', () => {
+  const pct = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+  document.getElementById('scroll-progress').style.width = Math.min(pct, 100) + '%';
+  document.getElementById('topnav').classList.toggle('scrolled', window.scrollY > 20);
+}, { passive: true });
+
+// ── Cursor glow
+const glow = document.getElementById('cursorGlow');
+if (glow) {
+  document.addEventListener('mousemove', e => {
+    glow.style.left = e.clientX + 'px';
+    glow.style.top  = e.clientY + 'px';
+  });
+}
+
+// ── Counter animation (ease-out-expo)
+function animateCounters() {
+  document.querySelectorAll('.hstat-n').forEach(el => {
+    const text = el.textContent.trim();
+    const num  = parseFloat(text.replace(/[^0-9.]/g, ''));
+    const sfx  = text.replace(/[0-9.]/g, '');
+    if (isNaN(num)) return;
+    let start = 0;
+    const dur  = 1400;
+    const step = ts => {
+      if (!start) start = ts;
+      const p = Math.min((ts - start) / dur, 1);
+      const e = 1 - Math.pow(1 - p, 4); // ease-out-quart
+      el.textContent = (num < 10 ? Math.round(e * num) : Math.round(e * num)) + sfx;
+      if (p < 1) requestAnimationFrame(step);
+      else el.textContent = num + sfx;
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+// ── 3D card tilt effect
+function initTilt() {
+  document.querySelectorAll('.card, .mcard, .person-card').forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width  - 0.5;
+      const y = (e.clientY - r.top)  / r.height - 0.5;
+      card.style.transform = `translateY(-5px) perspective(600px) rotateY(${x*7}deg) rotateX(${-y*7}deg)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = '';
+      card.style.transition = 'transform .6s cubic-bezier(.175,.885,.32,1.275), box-shadow .5s, border-color .5s';
+      setTimeout(() => card.style.transition = '', 500);
+    });
+  });
+}
+
+// ── Page navigation
+function sp(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nt').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  const n = document.getElementById('nt-' + id);
+  if (n) n.classList.add('active');
+  if (id === 'dashboard' && !window.tlLoaded) {
+    window.tlLoaded = true;
+    const viz = document.querySelector('#viz1776824865732 .tableauViz');
+    viz.style.width  = '1456px';
+    viz.style.height = '820px';
+    viz.style.display = 'block';
+    const s = document.createElement('script');
+    s.src = 'https://public.tableau.com/javascripts/api/viz_v1.js';
+    viz.parentNode.insertBefore(s, viz);
+    // Scale viz to container after it loads
+    setTimeout(resizeTableau, 600);
+    setTimeout(resizeTableau, 1800);
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (id === 'home') setTimeout(animateCounters, 300);
+}
+
+// ── Accordion
+function toggleAcc(id) {
+  const section = document.getElementById(id);
+  const pill    = document.getElementById('pill-' + id);
+  const isOpen  = section.classList.contains('open');
+  document.querySelectorAll('.acc-section').forEach(s => s.classList.remove('open'));
+  document.querySelectorAll('.subnav-pill').forEach(p => p.classList.remove('open'));
+  if (!isOpen) {
+    section.classList.add('open');
+    if (pill) pill.classList.add('open');
+    setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+}
+
+function openAcc(id) {
+  if (!document.getElementById('page-about').classList.contains('active')) {
+    sp('about');
+    setTimeout(() => toggleAcc(id), 420);
+  } else { toggleAcc(id); }
+}
+
+// ── Language toggle
+function setLang(lang) {
+  document.body.classList.remove('lang-en', 'lang-id');
+  document.body.classList.add('lang-' + lang);
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  document.getElementById('btn-id').classList.toggle('active', lang === 'id');
+}
+
+// ── Scroll reveal with IntersectionObserver
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('vis'); obs.unobserve(e.target); }});
+}, { threshold: 0.05 });
+document.querySelectorAll('.rv').forEach(el => obs.observe(el));
+
+// ── Init
+setTimeout(animateCounters, 1400);
+initTilt();
+
+// ── Title colour-reveal — two phase ──────────────────
+// Phase A: immediately set words dark (runs before hero fades in)
+//          so they appear dark during the title's own fadeUp
+// Phase B: after hero is visible, words light up with colour transition
+(function() {
+  var DARK = '#111827';
+
+  function lock(sel) {
+    var el = document.querySelector(sel);
+    if (el) {
+      el.style.setProperty('color',       DARK,  'important');
+      el.style.setProperty('text-shadow', 'none','important');
+    }
+  }
+
+  function reveal(sel, brightCol, glowRgba, finalCol, ms) {
+    setTimeout(function() {
+      var el = document.querySelector(sel);
+      if (!el) return;
+      // Enable transition, THEN change colour (two rAFs = guaranteed paint commit)
+      el.style.setProperty('transition',
+        'color .65s ease-out, text-shadow .5s ease-out', 'important');
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          el.style.setProperty('color',
+            brightCol, 'important');
+          el.style.setProperty('text-shadow',
+            '0 0 22px ' + glowRgba, 'important');
+          // Settle to deeper final colour, glow fades
+          setTimeout(function() {
+            el.style.setProperty('color',       finalCol, 'important');
+            el.style.setProperty('text-shadow', 'none',   'important');
+          }, 380);
+        });
+      });
+    }, ms);
+  }
+
+  // Phase A — lock dark immediately
+  lock('.accent-energy');
+  lock('.accent-climate');
+
+  // Phase B — light up after hero is fully visible (~850ms)
+  //           energy at 1 000ms, climate at 1 260ms
+  reveal('.accent-energy',
+    '#16A34A', 'rgba(22,163,74,.38)',  '#166534', 1000);
+  reveal('.accent-climate',
+    '#3B82F6', 'rgba(59,130,246,.32)', '#1e40af', 1260);
+})();
+
+
+// ── Tableau responsive scaling ─────────────────────────────
+// Locks the viz to its "design" dimensions (1456×820, built on
+// 1920×1080 @ 125% DPI → 1536 CSS px − 80 px padding = 1456 px)
+// then scales it proportionally on any other screen.
+function resizeTableau() {
+  var wrap = document.querySelector('.tableau-wrap');
+  var viz  = document.querySelector('#viz1776824865732');
+  if (!wrap || !viz) return;
+
+  var DESIGN_W = 1456;   // matches user's screen
+  var DESIGN_H = 820;    // original height
+
+  // Only apply on non-mobile
+  if (window.innerWidth <= 900) {
+    viz.style.transform = 'none';
+    viz.style.width     = '100%';
+    wrap.style.height   = 'auto';
+    return;
+  }
+
+  var availW = wrap.offsetWidth;
+  var scale  = availW / DESIGN_W;
+
+  viz.style.width          = DESIGN_W + 'px';
+  viz.style.transformOrigin= 'top left';
+  viz.style.transform      = 'scale(' + scale + ')';
+  wrap.style.height        = Math.round(DESIGN_H * scale) + 'px';
+  wrap.style.overflow      = 'hidden';
+}
+
+// Re-scale on window resize (debounced)
+var _tlResizeTimer;
+window.addEventListener('resize', function() {
+  clearTimeout(_tlResizeTimer);
+  _tlResizeTimer = setTimeout(resizeTableau, 120);
+}, { passive: true });
+
+</script>
+</body>
+</html>
