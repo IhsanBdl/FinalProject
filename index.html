@@ -304,10 +304,10 @@ body::before {
 /* ─── HERO TITLE — Two elegant accents ─── */
 .hero-title {
   font-family: var(--serif);
-  font-size: clamp(2.6rem, 5.2vw, 4.8rem);
-  color: var(--text); line-height: 1.08;
-  margin-bottom: 1.5rem; letter-spacing: -.038em;
-  max-width: 920px;
+  font-size: clamp(2.8rem, 4.2vw, 4.6rem);
+  color: var(--text); line-height: 1.1;
+  margin-bottom: 1.5rem; letter-spacing: -.025em;
+  max-width: 1300px;
   animation: fadeUp .65s .2s both;
   font-weight: 600;
 }
@@ -689,7 +689,7 @@ footer::before {
   .nav-cta{padding:7px 12px;font-size:12px;}
   .container{padding:3rem 1.5rem;}
   .hero{padding:3rem 1.5rem 2.5rem;}
-  .hero-title{font-size:2.2rem;}
+  .hero-title{font-size:2.4rem;}
   .two-col,.two-col-wide,.method-grid,.card-grid{grid-template-columns:1fr;}
   .hero-stats{grid-template-columns:repeat(2,1fr);}
   .hstat:nth-child(2){border-right:none;}
@@ -1018,13 +1018,10 @@ footer::before {
   <div class="hero">
     <div class="hero-eyebrow">🇮🇩 <span data-en>Final Project · PENS 2026</span><span data-id>Proyek Akhir · PENS 2026</span></div>
     <h1 class="hero-title">
-      <span data-en>Predictive Modeling &amp; Causality Analysis of<br><em class="accent-energy">Energy Consumption</em> and<br><em class="accent-climate">Climate Change</em> in Indonesia</span>
-      <span data-id>Pemodelan Prediktif dan Analisis Kausalitas pada<br><em class="accent-energy">Konsumsi Energi</em> dan<br><em class="accent-climate">Perubahan Iklim</em> di Indonesia</span>
+      <span data-en>Analytic Dashboard of <em class="accent-energy">Energy Consumption</em> and <em class="accent-climate">Climate Change</em> in Indonesia</span>
+      <span data-id>Dashboard Analitik <em class="accent-energy">Konsumsi Energi</em> dan <em class="accent-climate">Perubahan Iklim</em> di Indonesia</span>
     </h1>
-    <p class="hero-subtitle">
-      <span data-en>Using Bayesian Vector AutoRegression (BVAR), Sequence-to-Sequence LSTM (Seq2Seq), and Holt Method for forecasting; Granger Causality Test and Transfer Entropy for causality analysis — presented through the interactive SIECCI dashboard powered by Tableau.</span>
-      <span data-id>Menggunakan Bayesian Vector AutoRegression (BVAR), Sequence-to-Sequence LSTM (Seq2Seq), dan Holt Method untuk peramalan; serta Uji Kausalitas Granger dan Transfer Entropy untuk analisis kausalitas — disajikan melalui dashboard interaktif SIECCI berbasis Tableau.</span>
-    </p>
+
     <div class="hero-actions">
       <button class="btn-primary" onclick="sp('dashboard')">
         <span data-en>Open Interactive Dashboard →</span>
@@ -1623,7 +1620,6 @@ function sp(id) {
     const s = document.createElement('script');
     s.src = 'https://public.tableau.com/javascripts/api/viz_v1.js';
     viz.parentNode.insertBefore(s, viz);
-    // Scale viz to container after it loads
     setTimeout(resizeTableau, 600);
     setTimeout(resizeTableau, 1800);
   }
